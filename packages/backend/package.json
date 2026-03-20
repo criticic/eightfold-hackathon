@@ -1,0 +1,16 @@
+{
+  "name": "@truthtalent/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "start": "bun run dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

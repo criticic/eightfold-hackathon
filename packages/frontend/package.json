@@ -1,0 +1,12 @@
+{
+  "name": "@truthtalent/frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Frontend dev server - Person 1 & 2 will set this up'",
+    "build": "echo 'Frontend build'",
+    "test": "echo 'Frontend tests'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
