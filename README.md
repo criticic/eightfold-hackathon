@@ -2,48 +2,21 @@
 
 > The Post-Resume Era: Architecting High-Trust Talent Intelligence
 
-A hackathon project for Techkriti '26 × Eightfold AI that moves beyond static resume parsing to dynamically discover, verify, and match human potential using GitHub-verified signals.
+A hackathon project for Techkriti '26 × Eightfold AI that goes beyond static resumes and evaluates candidates using real GitHub evidence with transparent reasoning.
 
 ## Project Structure
 
 This is a Bun workspace monorepo with the following packages:
 
-```
-truthtalent/
+```text
+eightfold-hackathon/
 ├── packages/
-│   ├── frontend/      # Next.js web application (Person 1 & 2)
-│   ├── backend/       # Elysia backend server (Person 3)
-│   └── agents/        # AI agents for GitHub analysis (Person 4)
-├── shared/            # Shared types and utilities
-└── package.json       # Workspace root
+│   ├── frontend/      # Next.js app for recruiter/candidate workflows
+│   ├── backend/       # Elysia API, orchestration, persistence
+│   └── agents/        # Gemini + GitHub analysis agents
+├── shared/            # API contracts and shared utilities
+└── package.json       # Bun workspace root
 ```
-
-## Team Responsibilities
-
-### Person 1: Frontend - Recruiter Portal
-- Recruiter landing page
-- Repo input form (3-4 GitHub URLs)
-- JD display and candidate evaluation UI
-
-### Person 2: Frontend - Candidate Portal  
-- Candidate landing page
-- GitHub username input & resume upload
-- Skills verification report display
-- Match score visualization
-
-### Person 3: Backend Engineer
-- Elysia server setup (TypeScript)
-- API endpoints for both portals
-- Agent orchestration
-- Response caching & WebSocket support
-- Authentication with Better Auth
-- SQLite database with Drizzle ORM
-
-### Person 4: AI/Agents Engineer
-- GitHub analysis agent (TypeScript/Octokit)
-- Matching engine (embeddings + LLM)
-- Explainability layer
-- JD generation with LLM
 
 ## Quick Start
 
@@ -55,9 +28,9 @@ bun install
 bun dev
 
 # Work on specific package
-cd packages/frontend && bun dev
-cd packages/backend && bun dev
-cd packages/agents && bun dev
+bun run --filter @truthtalent/frontend dev
+bun run --filter @truthtalent/backend dev
+bun run --filter @truthtalent/agents dev
 ```
 
 ## Environment Files
@@ -82,7 +55,7 @@ GITHUB_TOKEN=...
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, React, Tailwind CSS
+- **Frontend**: Next.js 16, React, Tailwind CSS
 - **Backend**: Elysia (Bun), TypeScript, Better Auth, Drizzle ORM
 - **Database**: SQLite (local, gitignored)
 - **Agents**: Octokit, Google Gemini Flash (multimodal LLM), TypeScript
@@ -92,30 +65,21 @@ GITHUB_TOKEN=...
 
 ## Features
 
-### Impact Area 01: Signal Extraction & Verification
-- ✅ GitHub profile analysis for verified skills
-- ✅ Resume vs. GitHub cross-verification
-- ✅ Evidence-based skill scoring
-
-### Impact Area 04: Glass-Box Recruiter
-- ✅ Explainable match scores
-- ✅ Transparent reasoning chains
-- ✅ Bias-resistant evaluation
-
-### Unique Features
-- 🔥 Reverse JD Generation: Analyze company repos to create realistic job descriptions
-- 🔍 Live GitHub Verification: Real-time skill validation from actual code
-- 📊 Evidence Trails: Every score backed by specific repos and commits
+- GitHub profile analysis for verified technical signals
+- Resume + GitHub evaluation with evidence-backed scoring
+- Explainable ranking with traceable reasoning
+- Reverse JD generation from company repositories
+- Live run logs for JD creation and candidate evaluation
+- Recruiter and candidate portals with shared contracts
 
 ## API Contracts
 
 See `shared/CONTRACTS.md` for API endpoint specifications.
 
-## Development Timeline
+## Notes
 
-- **Hours 1-2**: Foundation (minimal dependencies)
-- **Hours 3-4**: Core features (start integrating)
-- **Hours 5-6**: Integration & polish
+- API contracts are documented in `shared/CONTRACTS.md`.
+- Local SQLite data is stored under backend paths and ignored by git.
 
 ## License
 
