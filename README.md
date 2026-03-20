@@ -4,6 +4,14 @@
 
 A hackathon project for Techkriti '26 × Eightfold AI that goes beyond static resumes and evaluates candidates using real GitHub evidence with transparent reasoning.
 
+## Pitch
+
+Hiring is still dominated by keyword resumes and black-box screening. RecruitOS flips that model.
+
+RecruitOS builds a glass-box hiring workflow where every recommendation is backed by verifiable engineering evidence. Recruiters can generate job descriptions directly from real company repositories, evaluate candidates against actual code signals, and inspect trace logs that show how each score was produced.
+
+In short: less resume theater, more proof of work.
+
 ## Project Structure
 
 This is a Bun workspace monorepo with the following packages:
@@ -71,6 +79,19 @@ GITHUB_TOKEN=...
 - Reverse JD generation from company repositories
 - Live run logs for JD creation and candidate evaluation
 - Recruiter and candidate portals with shared contracts
+
+## Technical Features
+
+- Agentic JD generation from GitHub repositories (Gemini + function tools)
+- Resume PDF parsing with multimodal Gemini input
+- Candidate matching pipeline with verified_skills, partially_verified_skills, and missing_for_role outputs
+- Live run orchestration for long operations (`/generate-jd/start`, `/evaluate-candidate-resume/start`) with polling endpoints
+- Step-level execution state (`queued`, `running`, `done`, `error`) and timestamped event logs
+- Thought-summary and tool-call tracing surfaced in frontend run logs
+- Evidence-linked scoring persisted in SQLite (Drizzle ORM)
+- Evaluation trace persistence in `agent_runs` for post-hoc inspection
+- Response caching for expensive recruiter analysis/JD generation flows
+- End-to-end TypeScript monorepo with Bun workspaces and shared API contracts
 
 ## API Contracts
 
