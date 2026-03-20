@@ -10,7 +10,9 @@
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2"
+  },
   "dependencies": {
     "@better-auth/infra": "^0.1.12",
     "@types/node": "^25.5.0",

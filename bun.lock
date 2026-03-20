@@ -20,6 +20,9 @@
         "tailwindcss": "^4.2.2",
         "typescript": "^5.9.3",
       },
+      "devDependencies": {
+        "@tailwindcss/postcss": "^4.2.2",
+      },
     },
     "packages/agents": {
       "name": "@truthtalent/agents",
