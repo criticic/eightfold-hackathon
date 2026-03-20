@@ -17,7 +17,7 @@
 ```bash
 cd packages/backend
 
-# Install dependencies (Person 3 will add these)
+# Install dependencies
 bun install
 
 # Run database migrations
@@ -26,6 +26,15 @@ bun run db:migrate
 # Start development server
 bun run dev
 ```
+
+## Current Status
+
+- Elysia server scaffolded in `src/index.ts`
+- Better Auth mounted at `POST/GET /api/auth/*`
+- Drizzle + SQLite configured in `src/db/*` and `drizzle.config.ts`
+- Recruiter routes in `src/routes/recruiter.ts`
+- Candidate routes in `src/routes/candidate.ts`
+- SQLite cache service in `src/services/cache.ts`
 
 ## Tech Stack
 

@@ -45,6 +45,12 @@ Generate a JD from GitHub repositories:
 
 ```bash
 bun run src/cli.ts <repo1> <repo2> [...] -- "<rough_jd_context>"
+
+# Explicit subcommand form
+bun run src/cli.ts jd <repo1> <repo2> [...] -- "<rough_jd_context>"
+
+# Resume (PDF/text) to GitHub verification report
+bun run src/cli.ts match --resume ./resume.pdf --repos vercel/next.js,vercel/turbo --role "Frontend engineer"
 ```
 
 **Examples**:
@@ -168,6 +174,7 @@ packages/agents/src/
 ├── github-tools.ts    # GitHub API tools for the agent
 ├── agent-loop.ts      # Core agent loop with Gemini
 ├── jd-generator.ts    # JD generation workflow
+├── resume-matcher.ts  # Resume extraction + GitHub matching
 ├── cli.ts            # CLI interface
 └── index.ts          # Main exports
 ```

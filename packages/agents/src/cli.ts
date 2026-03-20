@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 
 /**
- * CLI for testing the JD generator
+ * CLI for JD generation and resume-to-GitHub matching
  */
 
 import { JDGenerator } from "./jd-generator.js";
-import type { JDGenerationInput } from "./types.js";
+import { ResumeMatcher } from "./resume-matcher.js";
+import type { JDGenerationInput, ResumeMatchInput } from "./types.js";
 import { readFileSync, existsSync } from "fs";
 
 function loadEnv() {
@@ -41,35 +42,69 @@ async function main() {
 	// Load .env file
 	loadEnv();
 
-	console.log("\n🚀 TruthTalent JD Generator CLI\n");
+	console.log("\n🚀 TruthTalent Agents CLI\n");
 
 	// Get arguments
 	const args = process.argv.slice(2);
+	const command = args[0];
 
-	if (args.length < 2) {
-		console.error("Usage: bun run cli.ts <repo1> <repo2> [...] -- <rough_jd>");
-		console.error("\nExample:");
-		console.error('  bun run cli.ts vercel/next.js vercel/turbo -- "Frontend engineer for build tools team"');
-		console.error("\nEnvironment variables:");
-		console.error("  GOOGLE_API_KEY - Required for Gemini API");
-		console.error("  GITHUB_TOKEN - Optional, for private repos or higher rate limits");
-		process.exit(1);
+	if (!command) {
+		printUsageAndExit();
 	}
 
-	// Check for API key
+	if (command === "match") {
+		await runMatchCommand(args.slice(1));
+		return;
+	}
+
+	if (command === "jd") {
+		await runJDCommand(args.slice(1));
+		return;
+	}
+
+	// Backward compatibility: existing JD usage without subcommand
+	await runJDCommand(args);
+}
+
+function printUsageAndExit(): never {
+	console.error("Usage:");
+	console.error('  bun run cli.ts jd <repo1> <repo2> [...] -- "<rough_jd>"');
+	console.error('  bun run cli.ts match --resume <path.pdf|txt|md> --repos <owner/repo,owner/repo> [--role "..."] [--username "..."]');
+	console.error("\nExamples:");
+	console.error('  bun run cli.ts jd vercel/next.js -- "Frontend engineer"');
+	console.error('  bun run cli.ts match --resume ./resume.pdf --repos vercel/next.js,vercel/turbo --role "Frontend engineer"');
+	console.error("\nEnvironment variables:");
+	console.error("  GOOGLE_API_KEY - Required for Gemini API");
+	console.error("  GITHUB_TOKEN - Optional, for private repos or higher rate limits");
+	process.exit(1);
+}
+
+function assertApiKey() {
 	if (!process.env.GOOGLE_API_KEY) {
 		console.error("❌ Error: GOOGLE_API_KEY environment variable is required");
 		console.error("\nGet your API key from: https://makersuite.google.com/app/apikey");
 		console.error('Then run: export GOOGLE_API_KEY="your-key-here"');
 		process.exit(1);
 	}
+}
 
-	// Check for GitHub App credentials
-	if (!process.env.GITHUB_APP_ID || !process.env.GITHUB_PRIVATE_KEY_PATH) {
-		console.warn("\n⚠️  Warning: GitHub App credentials not found");
-		console.warn("   Set GITHUB_APP_ID and GITHUB_PRIVATE_KEY_PATH for higher rate limits");
-		console.warn("   Continuing with unauthenticated access (60 requests/hour)\n");
+function printGithubTokenWarning() {
+	if (!process.env.GITHUB_TOKEN) {
+		console.warn("\n⚠️  Warning: GITHUB_TOKEN not found");
+		console.warn("   Continuing with unauthenticated access (60 requests/hour)");
+		console.warn("   Set GITHUB_TOKEN for higher rate limits\n");
 	}
+}
+
+async function runJDCommand(args: string[]) {
+	console.log("🎯 Mode: JD Generation\n");
+
+	if (args.length < 2) {
+		printUsageAndExit();
+	}
+
+	assertApiKey();
+	printGithubTokenWarning();
 
 	// Parse arguments
 	const separatorIndex = args.indexOf("--");
@@ -107,11 +142,9 @@ async function main() {
 	};
 
 	try {
-		// Generate JD
 		const generator = new JDGenerator();
 		const jd = await generator.generateJD(input);
 
-		// Display results
 		console.log("\n" + "=".repeat(80));
 		console.log("📄 GENERATED JOB DESCRIPTION");
 		console.log("=".repeat(80));
@@ -127,29 +160,15 @@ async function main() {
 		jd.responsibilities.forEach((resp, i) => console.log(`   ${i + 1}. ${resp}`));
 
 		console.log(`\n🔧 Required Skills:`);
-		if (jd.required_skills.languages.length > 0) {
-			console.log(`   Languages: ${jd.required_skills.languages.join(", ")}`);
-		}
-		if (jd.required_skills.frameworks.length > 0) {
-			console.log(`   Frameworks: ${jd.required_skills.frameworks.join(", ")}`);
-		}
-		if (jd.required_skills.tools.length > 0) {
-			console.log(`   Tools: ${jd.required_skills.tools.join(", ")}`);
-		}
-		if (jd.required_skills.technical.length > 0) {
-			console.log(`   Technical: ${jd.required_skills.technical.join(", ")}`);
-		}
+		if (jd.required_skills.languages.length > 0) console.log(`   Languages: ${jd.required_skills.languages.join(", ")}`);
+		if (jd.required_skills.frameworks.length > 0) console.log(`   Frameworks: ${jd.required_skills.frameworks.join(", ")}`);
+		if (jd.required_skills.tools.length > 0) console.log(`   Tools: ${jd.required_skills.tools.join(", ")}`);
+		if (jd.required_skills.technical.length > 0) console.log(`   Technical: ${jd.required_skills.technical.join(", ")}`);
 
 		console.log(`\n⭐ Preferred Skills:`);
-		if (jd.preferred_skills.frameworks.length > 0) {
-			console.log(`   Frameworks: ${jd.preferred_skills.frameworks.join(", ")}`);
-		}
-		if (jd.preferred_skills.tools.length > 0) {
-			console.log(`   Tools: ${jd.preferred_skills.tools.join(", ")}`);
-		}
-		if (jd.preferred_skills.technical.length > 0) {
-			console.log(`   Technical: ${jd.preferred_skills.technical.join(", ")}`);
-		}
+		if (jd.preferred_skills.frameworks.length > 0) console.log(`   Frameworks: ${jd.preferred_skills.frameworks.join(", ")}`);
+		if (jd.preferred_skills.tools.length > 0) console.log(`   Tools: ${jd.preferred_skills.tools.join(", ")}`);
+		if (jd.preferred_skills.technical.length > 0) console.log(`   Technical: ${jd.preferred_skills.technical.join(", ")}`);
 
 		console.log(`\n📊 Evidence:`);
 		console.log(`   Repos analyzed: ${jd.evidence.repos_analyzed.length}`);
@@ -161,9 +180,7 @@ async function main() {
 			for (const [tech, files] of Object.entries(jd.evidence.technologies_found)) {
 				console.log(`   ${tech}:`);
 				files.slice(0, 3).forEach((file) => console.log(`     - ${file}`));
-				if (files.length > 3) {
-					console.log(`     ... and ${files.length - 3} more`);
-				}
+				if (files.length > 3) console.log(`     ... and ${files.length - 3} more`);
 			}
 		}
 
@@ -177,17 +194,133 @@ async function main() {
 		console.log("=".repeat(80));
 		console.log(jd.anonymized_version);
 
-		// Save to file
 		const outputFile = `jd_${Date.now()}.json`;
 		await Bun.write(outputFile, JSON.stringify(jd, null, 2));
 		console.log(`\n💾 Saved to: ${outputFile}`);
-
 		console.log("\n✅ Done!\n");
 	} catch (error) {
 		console.error("\n❌ Error generating job description:");
 		console.error(error);
 		process.exit(1);
 	}
+}
+
+async function runMatchCommand(args: string[]) {
+	console.log("🎯 Mode: Resume-GitHub Match\n");
+	assertApiKey();
+	printGithubTokenWarning();
+
+	const parsed = parseMatchArgs(args);
+
+	if (!parsed.resumePath || parsed.repos.length === 0) {
+		console.error("❌ Error: match mode requires --resume and --repos");
+		printUsageAndExit();
+	}
+
+	try {
+		const matcher = new ResumeMatcher();
+		const report = await matcher.generateReport(parsed);
+
+		console.log("\n" + "=".repeat(80));
+		console.log("🧠 RESUME ↔ GITHUB MATCH REPORT");
+		console.log("=".repeat(80));
+		console.log(`\n👤 Candidate: ${report.candidate_name}`);
+		console.log(`🎯 Role: ${report.target_role}`);
+		console.log(`📈 Match Score: ${report.overall_match_score}/100`);
+		console.log(`✅ Recommendation: ${report.recommendation}`);
+
+		console.log("\n🔍 Verified Skills:");
+		if (report.verified_skills.length === 0) {
+			console.log("   - None");
+		} else {
+			report.verified_skills.forEach((skill) => {
+				console.log(`   - ${skill.skill} (${skill.confidence})`);
+				skill.evidence_files.slice(0, 3).forEach((f) => console.log(`      • ${f}`));
+			});
+		}
+
+		if (report.partially_verified_skills.length > 0) {
+			console.log("\n🟨 Partially Verified:");
+			report.partially_verified_skills.forEach((skill) => {
+				console.log(`   - ${skill.skill} (${skill.confidence})`);
+				skill.evidence_files.slice(0, 2).forEach((f) => console.log(`      • ${f}`));
+			});
+		}
+
+		if (report.unverified_claims.length > 0) {
+			console.log("\n⚠️  Unverified Claims:");
+			report.unverified_claims.forEach((claim) => console.log(`   - ${claim}`));
+		}
+
+		if (report.missing_for_role.length > 0) {
+			console.log("\n📌 Missing For Target Role:");
+			report.missing_for_role.forEach((item) => console.log(`   - ${item}`));
+		}
+
+		if (report.github_strengths.length > 0) {
+			console.log("\n💪 GitHub Strengths:");
+			report.github_strengths.forEach((item) => console.log(`   - ${item}`));
+		}
+
+		console.log("\n📝 Explanation:");
+		console.log(report.explanation);
+
+		const outputFile = `resume_match_${Date.now()}.json`;
+		await Bun.write(outputFile, JSON.stringify(report, null, 2));
+		console.log(`\n💾 Saved to: ${outputFile}`);
+		console.log("\n✅ Done!\n");
+	} catch (error) {
+		console.error("\n❌ Error generating resume match report:");
+		console.error(error);
+		process.exit(1);
+	}
+}
+
+function parseMatchArgs(args: string[]): ResumeMatchInput {
+	let resumePath = "";
+	let targetRole = "Software Engineer";
+	let githubUsername = "";
+	const repos: string[] = [];
+
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+
+		if (arg === "--resume") {
+			resumePath = args[i + 1] || "";
+			i++;
+			continue;
+		}
+
+		if (arg === "--repos") {
+			const value = args[i + 1] || "";
+			const parsedRepos = value
+				.split(",")
+				.map((repo) => repo.trim())
+				.filter(Boolean);
+			repos.push(...parsedRepos);
+			i++;
+			continue;
+		}
+
+		if (arg === "--role") {
+			targetRole = args[i + 1] || targetRole;
+			i++;
+			continue;
+		}
+
+		if (arg === "--username") {
+			githubUsername = args[i + 1] || "";
+			i++;
+			continue;
+		}
+	}
+
+	return {
+		resumePath,
+		repos,
+		targetRole,
+		githubUsername,
+	};
 }
 
 main();

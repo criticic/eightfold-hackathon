@@ -113,3 +113,44 @@ export interface JDGenerationInput {
 	repos: string[]; // Array of "owner/repo" strings
 	rough_jd: string; // Rough context like "payments team frontend work"
 }
+
+// Resume matching types
+export interface ResumeProfile {
+	candidate_name: string;
+	summary: string;
+	claimed_skills: {
+		languages: string[];
+		frameworks: string[];
+		tools: string[];
+		domains: string[];
+	};
+	experience_highlights: string[];
+	projects: string[];
+}
+
+export interface ResumeMatchInput {
+	resumePath: string;
+	repos: string[];
+	targetRole?: string;
+	githubUsername?: string;
+}
+
+export interface VerifiedSkill {
+	skill: string;
+	evidence_files: string[];
+	confidence: "high" | "medium" | "low";
+	notes: string;
+}
+
+export interface ResumeMatchReport {
+	candidate_name: string;
+	target_role: string;
+	overall_match_score: number; // 0-100
+	verified_skills: VerifiedSkill[];
+	partially_verified_skills: VerifiedSkill[];
+	unverified_claims: string[];
+	missing_for_role: string[];
+	github_strengths: string[];
+	recommendation: "strong_yes" | "yes" | "maybe" | "no";
+	explanation: string;
+}
