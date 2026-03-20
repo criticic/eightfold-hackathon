@@ -1,0 +1,98 @@
+{
+  "title": "Software Engineer - Notifications Team",
+  "company": "Zulip",
+  "team": "Notifications",
+  "overview": "As a Software Engineer on the Notifications Team, you will be responsible for the core engine that keeps Zulip users connected and productive. You'll work on a sophisticated, high-performance system that handles complex notification logic across mobile push (iOS/Android), desktop, and email. You will manage the lifecycle of a notification from the moment a message is sent to its delivery, ensuring low latency, high reliability, and respect for user preferences like muting, topic following, and idle status.",
+  "responsibilities": [
+    "Develop and maintain the backend notification logic in Python/Django, focusing on the core business rules for 'notifiability' defined in zerver/lib/notification_data.py.",
+    "Optimize the performance of notification delivery systems using Tornado and RabbitMQ to handle thousands of concurrent users and massive message volumes.",
+    "Manage and improve mobile push notification integrations with Firebase Cloud Messaging (FCM) for Android and aioapns for iOS.",
+    "Implement and refine the 'idle desktop' and 'hard disconnect' logic to ensure users never miss critical messages while avoiding notification spam.",
+    "Develop rich, accessible email notification templates using Jinja2/HTML, and manage the batching logic in MissedMessageWorker to consolidate missed messages into single digests.",
+    "Enhance client-side desktop and audible notification systems in TypeScript, ensuring seamless integration with browser APIs and Electron bridges.",
+    "Work closely with the infrastructure team to monitor and scale notification workers and ensure the reliability of the mobile push notification bouncer service."
+  ],
+  "required_skills": {
+    "technical": [
+      "Deep understanding of asynchronous event-driven architectures and message queuing (RabbitMQ/Pika).",
+      "Experience with relational databases (PostgreSQL) and caching layers (Redis, Memcached) for high-traffic applications.",
+      "Knowledge of mobile push notification ecosystems (FCM, APNs).",
+      "Experience with HTML/CSS for email template design and cross-client compatibility."
+    ],
+    "tools": [
+      "RabbitMQ",
+      "Redis",
+      "PostgreSQL",
+      "Sentry",
+      "MyPy (for static type checking)"
+    ],
+    "frameworks": [
+      "Django",
+      "Tornado",
+      "SQLAlchemy"
+    ],
+    "languages": [
+      "Python",
+      "TypeScript",
+      "JavaScript"
+    ]
+  },
+  "preferred_skills": {
+    "technical": [
+      "Experience with Electron for desktop application development.",
+      "Understanding of 'Zilencer' or similar enterprise-grade push notification bouncer services.",
+      "Knowledge of internationalization (i18n) and localization patterns in large codebases."
+    ],
+    "tools": [
+      "Docker",
+      "Puppet",
+      "uv (Python package manager)"
+    ],
+    "frameworks": [
+      "Jinja2",
+      "Handlebars"
+    ]
+  },
+  "experience_level": "Senior",
+  "detailed_version": "Zulip is looking for a Senior Software Engineer to join our Notifications Team. This role is central to Zulip's mission of providing an organized, productive chat experience. You will dive into the heart of our backend (primarily Python/Django) to manage the 'notifiability' logic in zerver/lib/notification_data.py, which calculates triggers based on mentions, alert words, and topic visibility policies. You'll work with our Tornado-based event system to solve challenging problems like the 'idle desktop problem,' where we must determine if a user is truly offline before triggering a push notification. \n\nOn the backend, you'll maintain our MissedMessageWorker (zerver/worker/missedmessage_emails.py) and PushNotificationsWorker (zerver/worker/missedmessage_mobile_notifications.py), leveraging RabbitMQ for reliable task queuing. You'll also be responsible for the mobile push notification bridge, interfacing with FCM and aioapns (via zilencer/lib/push_notifications.py). On the frontend, you'll maintain the TypeScript logic in web/src/message_notifications.ts to handle browser-level notifications and Electron bridge events. We value clean, type-safe code (MyPy), comprehensive testing (as seen in our extensive test suites like test_notification_data.py), and a deep understanding of distributed systems architecture.",
+  "anonymized_version": "We are seeking a Senior Software Engineer for our Notifications Team to lead the development of a cross-platform notification engine. This role involves building high-scale systems that manage real-time event delivery across web, mobile, and email. You will be responsible for complex business logic that determines notification triggers based on user behavior and preferences. \n\nKey technologies include Python (Django/Tornado) and TypeScript. You will work extensively with message brokers like RabbitMQ and Redis to manage high-volume event streams. A significant part of the role involves integrating with push notification providers (APNs/FCM) and architecting resilient workers to handle background tasks. You should have experience with relational databases (PostgreSQL) and a strong commitment to writing type-safe, well-tested code. If you enjoy solving 'hard disconnect' and 'idle state' challenges in a distributed environment, we'd love to hear from you.",
+  "evidence": {
+    "repos_analyzed": [
+      "zulip/zulip"
+    ],
+    "key_files": [
+      "zulip/zulip/zerver/lib/notification_data.py",
+      "zulip/zulip/zerver/lib/push_notifications.py",
+      "zulip/zulip/zerver/lib/email_notifications.py",
+      "zulip/zulip/web/src/message_notifications.ts",
+      "zulip/zulip/zerver/worker/missedmessage_mobile_notifications.py",
+      "zulip/zulip/docs/subsystems/notifications.md"
+    ],
+    "technologies_found": {
+      "Django": [
+        "zulip/zulip/pyproject.toml",
+        "zulip/zulip/zerver/lib/notification_data.py"
+      ],
+      "Tornado": [
+        "zulip/zulip/pyproject.toml",
+        "zulip/zulip/docs/subsystems/notifications.md"
+      ],
+      "RabbitMQ": [
+        "zulip/zulip/pyproject.toml",
+        "zulip/zulip/zerver/worker/missedmessage_mobile_notifications.py"
+      ],
+      "PostgreSQL": [
+        "zulip/zulip/pyproject.toml",
+        "zulip/zulip/Dockerfile-postgresql"
+      ],
+      "Firebase/APNs": [
+        "zulip/zulip/pyproject.toml",
+        "zulip/zulip/zerver/lib/push_notifications.py"
+      ],
+      "TypeScript": [
+        "zulip/zulip/package.json",
+        "zulip/zulip/web/src/message_notifications.ts"
+      ]
+    }
+  }
+}

@@ -6,6 +6,7 @@ import { GoogleGenAI } from "@google/genai";
 import { AgentLoop } from "./agent-loop.js";
 import { GitHubTools } from "./github-tools.js";
 import type { ResumeMatchInput, ResumeMatchReport, ResumeProfile } from "./types.js";
+import { requireGeminiApiKey } from "./env.js";
 
 const RESUME_EXTRACTION_PROMPT = `Extract this resume into strict JSON.
 
@@ -46,9 +47,11 @@ Rules:
 
 export class ResumeMatcher {
 	private client: GoogleGenAI;
+	private apiKey: string;
 
 	constructor() {
-		this.client = new GoogleGenAI({});
+		this.apiKey = requireGeminiApiKey();
+		this.client = new GoogleGenAI({ apiKey: this.apiKey });
 	}
 
 	async generateReport(input: ResumeMatchInput): Promise<ResumeMatchReport> {
@@ -62,7 +65,7 @@ export class ResumeMatcher {
 			systemPrompt: RESUME_MATCH_SYSTEM_PROMPT,
 			tools,
 			maxIterations: 25,
-			apiKey: process.env.GOOGLE_API_KEY || "",
+			apiKey: this.apiKey,
 		});
 
 		const state = await agentLoop.run(prompt);

@@ -13,7 +13,7 @@ export class AgentLoop {
 
 	constructor(config: AgentConfig) {
 		this.config = config;
-		this.client = new GoogleGenAI({});
+		this.client = new GoogleGenAI({ apiKey: this.config.apiKey });
 	}
 
 	/**
@@ -107,7 +107,8 @@ export class AgentLoop {
 			let hasFunctionCall = false;
 			let functionCalls: any[] = [];
 
-			for (const output of interaction.outputs) {
+			const outputs = (interaction as any).outputs || [];
+			for (const output of outputs) {
 				console.log(`\n📝 Output type: ${output.type}`);
 
 				if (output.type === "text" && output.text) {
@@ -183,7 +184,7 @@ export class AgentLoop {
 				return state;
 			} else {
 				// Model is done, no more tool calls
-				const textOutput = interaction.outputs.find((o: any) => o.type === "text");
+				const textOutput = outputs.find((o: any) => o.type === "text");
 				const text = textOutput?.text || "";
 
 				console.log(`✨ Final response:\n${text.slice(0, 500)}...`);
@@ -198,12 +199,7 @@ export class AgentLoop {
 			}
 		} catch (error) {
 			console.error(`❌ Error in iteration ${state.currentIteration}:`, error);
-			state.messages.push({
-				role: "assistant",
-				content: [{ type: "text", text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
-			});
-			state.isComplete = true;
-			return state;
+			throw error;
 		}
 	}
 

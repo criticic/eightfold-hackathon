@@ -5,6 +5,7 @@
 import { AgentLoop } from "./agent-loop.js";
 import { GitHubTools } from "./github-tools.js";
 import type { JDGenerationInput, JobDescription } from "./types.js";
+import { requireGeminiApiKey } from "./env.js";
 
 const JD_GENERATION_SYSTEM_PROMPT = `You are an expert technical recruiter and software engineer analyzing GitHub repositories to create accurate, evidence-based job descriptions.
 
@@ -43,6 +44,7 @@ export class JDGenerator {
 	 * Generate a job description from GitHub repositories
 	 */
 	async generateJD(input: JDGenerationInput): Promise<JobDescription> {
+		const apiKey = requireGeminiApiKey();
 		console.log("\n" + "=".repeat(80));
 		console.log("🎯 TruthTalent JD Generator");
 		console.log("=".repeat(80));
@@ -63,7 +65,7 @@ export class JDGenerator {
 			systemPrompt: JD_GENERATION_SYSTEM_PROMPT,
 			tools,
 			maxIterations: 25, // Enough for ~10-15 files per repo
-			apiKey: process.env.GOOGLE_API_KEY || "",
+			apiKey,
 		});
 
 		const state = await agentLoop.run(prompt);
@@ -206,6 +208,7 @@ Start by exploring the first repository!`;
 	 * Anonymize a detailed job description
 	 */
 	async anonymizeJD(detailedJD: JobDescription): Promise<string> {
+		const apiKey = requireGeminiApiKey();
 		console.log("\n🔒 Anonymizing job description...");
 
 		// The agent already generates both versions
@@ -232,7 +235,7 @@ Return ONLY the anonymized job description text (no JSON, no formatting).`;
 			systemPrompt: "You are an expert recruiter who specializes in creating public job descriptions that protect company confidentiality while being attractive to candidates.",
 			tools,
 			maxIterations: 3,
-			apiKey: process.env.GOOGLE_API_KEY || "",
+			apiKey,
 		});
 
 		const state = await agentLoop.run(prompt);

@@ -38,3 +38,7 @@ export async function setCached(key: string, type: string, data: unknown, ttlMs 
 			},
 		});
 }
+
+export async function deleteCached(key: string): Promise<void> {
+	await db.delete(analysisCache).where(eq(analysisCache.cache_key, key));
+}

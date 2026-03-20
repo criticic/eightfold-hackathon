@@ -1,0 +1,93 @@
+{
+  "title": "Senior Software Engineer - Core Memory Management",
+  "company": "Ladybird Browser",
+  "team": "Core Memory Management",
+  "overview": "As a member of the Core Memory Management team at Ladybird, you will be responsible for the architectural foundation of a truly independent, cross-platform web browser. Your work will directly impact the performance, stability, and memory efficiency of the entire engine, from the LibJS JavaScript runtime to the LibWeb rendering engine. You will maintain and evolve the unified Garbage Collector (LibGC) and the core 'Almost Kernel' (AK) library that powers the project.",
+  "responsibilities": [
+    "Design and implement performance optimizations for the LibGC mark-and-sweep garbage collector, including improvements to conservative stack scanning and sweep efficiency.",
+    "Maintain and extend the AK (Almost Kernel) library's suite of smart pointers (OwnPtr, RefPtr, WeakPtr) and core data structures to ensure safety and performance across the browser.",
+    "Develop and optimize low-level memory allocation strategies, including the use of BumpAllocators and type-isolated CellAllocators to minimize fragmentation and overhead.",
+    "Collaborate with the LibJS and LibWeb teams to integrate memory management patterns (e.g., visit_edges, finalization) into new web platform features.",
+    "Debug and resolve complex memory-related issues such as leaks, use-after-free, and corruption using advanced tooling like ASAN, LSAN, and custom heap analysis tools.",
+    "Contribute to the evolution of the browser's process architecture and its impact on memory isolation and resource management."
+  ],
+  "required_skills": {
+    "technical": [
+      "Deep understanding of Garbage Collection theory and implementation (Mark-and-Sweep, Root discovery, Conservative scanning).",
+      "Expert knowledge of memory allocation patterns (Bump allocation, Pool allocation, Slab allocation).",
+      "Proficiency in low-level systems programming and OS memory APIs (mmap, munmap, VirtualAlloc).",
+      "Experience with intrusive reference counting and smart pointer implementation details.",
+      "Expertise in debugging memory-intensive C++ applications."
+    ],
+    "tools": [
+      "CMake",
+      "Clang/LLVM Toolchain",
+      "ASAN (AddressSanitizer)",
+      "LSAN (LeakSanitizer)",
+      "GDB/LLDB"
+    ],
+    "frameworks": [
+      "Custom C++ Standard Library (AK)",
+      "LibGC (Custom Garbage Collection Library)"
+    ],
+    "languages": [
+      "C++20/23",
+      "Assembly (for stack scanning implementations)"
+    ]
+  },
+  "preferred_skills": {
+    "technical": [
+      "Experience with WebAssembly (Wasm) memory management.",
+      "Knowledge of JIT compiler memory management techniques.",
+      "Background in browser engine development (Chromium, WebKit, Gecko)."
+    ],
+    "tools": [
+      "GitHub Actions",
+      "Ninja",
+      "Clang-tidy"
+    ],
+    "frameworks": [
+      "LibJS (JavaScript Engine architecture)",
+      "LibWeb (Web Engine architecture)"
+    ]
+  },
+  "experience_level": "Senior",
+  "detailed_version": "Ladybird is building a new web browser from scratch, and the Core Memory Management team is at the heart of this effort. You will be working on the LibGC library, which provides a unified garbage collection mechanism for both the JavaScript engine (LibJS) and the DOM/Web engine (LibWeb). As seen in 'Libraries/LibGC/Heap.h', our heap management involves complex root discovery through 'ConservativeVector' and 'MarkingVisitor' patterns. You will be responsible for the 'Cell' lifecycle (Libraries/LibGC/Cell.h), implementing 'visit_edges' for complex objects and managing 'finalize' transitions. Beyond GC, you will maintain the 'AK' library, our custom replacement for the C++ standard library. This includes optimizing the smart pointer suite described in 'Documentation/SmartPointers.md' (NonnullRefPtr, OwnPtr, etc.) and low-level allocators like the 'BumpAllocator' (AK/BumpAllocator.h) which uses platform-specific calls like mmap and VirtualAlloc. Your role is critical in ensuring that Ladybird remains lean and performant while implementing the vast complexity of the modern web.",
+  "anonymized_version": "We are seeking a Senior Systems Engineer for our Core Platform team to lead the development of memory management infrastructure for a high-performance, cross-platform engine. In this role, you will design and optimize a custom Garbage Collection system and a suite of high-performance memory primitives. You will be responsible for low-level allocation strategies, including pool and bump allocators, and ensuring the safety of a large-scale C++ codebase through advanced smart pointer architectures. The ideal candidate has deep experience in systems programming, a strong grasp of C++20/23, and a proven track record of implementing and debugging complex memory management systems in performance-critical environments like browsers, game engines, or language runtimes.",
+  "evidence": {
+    "repos_analyzed": [
+      "LadybirdBrowser/ladybird"
+    ],
+    "key_files": [
+      "LadybirdBrowser/ladybird/Libraries/LibGC/Heap.h",
+      "LadybirdBrowser/ladybird/Libraries/LibGC/Cell.h",
+      "LadybirdBrowser/ladybird/AK/NonnullRefPtr.h",
+      "LadybirdBrowser/ladybird/AK/BumpAllocator.h",
+      "LadybirdBrowser/ladybird/AK/kmalloc.cpp",
+      "LadybirdBrowser/ladybird/Documentation/SmartPointers.md"
+    ],
+    "technologies_found": {
+      "C++20/23": [
+        "LadybirdBrowser/ladybird/Libraries/LibGC/Heap.h",
+        "LadybirdBrowser/ladybird/AK/NonnullRefPtr.h"
+      ],
+      "Garbage Collection (Mark-and-Sweep)": [
+        "LadybirdBrowser/ladybird/Libraries/LibGC/Heap.h",
+        "LadybirdBrowser/ladybird/Libraries/LibGC/Cell.h"
+      ],
+      "Custom Smart Pointers": [
+        "LadybirdBrowser/ladybird/AK/NonnullRefPtr.h",
+        "LadybirdBrowser/ladybird/AK/OwnPtr.h",
+        "LadybirdBrowser/ladybird/Documentation/SmartPointers.md"
+      ],
+      "Low-level Allocators": [
+        "LadybirdBrowser/ladybird/AK/BumpAllocator.h",
+        "LadybirdBrowser/ladybird/AK/kmalloc.cpp"
+      ],
+      "CMake": [
+        "LadybirdBrowser/ladybird/CMakeLists.txt",
+        "LadybirdBrowser/ladybird/Libraries/LibGC/CMakeLists.txt"
+      ]
+    }
+  }
+}

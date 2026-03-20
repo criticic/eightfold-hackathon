@@ -35,6 +35,12 @@ export GOOGLE_API_KEY="your-gemini-api-key"
 export GITHUB_TOKEN="your-github-token"
 ```
 
+Or use a local env file:
+
+```bash
+cp .env.example .env
+```
+
 Get your Gemini API key from: https://aistudio.google.com/app/apikey
 
 ## Usage

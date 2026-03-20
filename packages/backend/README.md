@@ -20,11 +20,25 @@ cd packages/backend
 # Install dependencies
 bun install
 
+# Configure env
+cp .env.example .env
+
 # Run database migrations
 bun run db:migrate
 
 # Start development server
 bun run dev
+```
+
+Required backend env:
+
+```bash
+PORT=8000
+DATABASE_URL=./data/db.sqlite
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:8000
+GOOGLE_API_KEY=...
+GITHUB_TOKEN=...
 ```
 
 ## Current Status

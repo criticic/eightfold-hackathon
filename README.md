@@ -60,6 +60,26 @@ cd packages/backend && bun dev
 cd packages/agents && bun dev
 ```
 
+## Environment Files
+
+- Root: copy `.env.example` to `.env` for running monorepo commands from repo root.
+- Backend: copy `packages/backend/.env.example` to `packages/backend/.env` when running backend from that folder.
+- Frontend: copy `packages/frontend/.env.example` to `packages/frontend/.env.local`.
+- Agents: copy `packages/agents/.env.example` to `packages/agents/.env` for standalone agent runs.
+
+Recommended values for local dev:
+
+```bash
+# packages/frontend/.env.local
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+
+# packages/backend/.env
+PORT=8000
+DATABASE_URL=./data/db.sqlite
+GOOGLE_API_KEY=...
+GITHUB_TOKEN=...
+```
+
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React, Tailwind CSS
