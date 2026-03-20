@@ -1,4 +1,4 @@
-# TruthTalent Agents
+# RecruitOS Agents
 
 Agentic system for generating evidence-based job descriptions from GitHub repositories.
 

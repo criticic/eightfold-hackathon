@@ -56,7 +56,7 @@ export class JDGenerator {
 			payload: { repos: input.repos },
 		});
 		console.log("\n" + "=".repeat(80));
-		console.log("🎯 TruthTalent JD Generator");
+		console.log("🎯 RecruitOS JD Generator");
 		console.log("=".repeat(80));
 		console.log(`\n📦 Analyzing ${input.repos.length} repositories:`);
 		input.repos.forEach((repo) => console.log(`   - ${repo}`));

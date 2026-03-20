@@ -1,4 +1,4 @@
-# TruthTalent - GitHub-Verified Hiring Intelligence
+# RecruitOS - GitHub-Verified Hiring Intelligence
 
 > The Post-Resume Era: Architecting High-Trust Talent Intelligence
 

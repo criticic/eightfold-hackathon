@@ -25,7 +25,7 @@ export function TopNav() {
     <div className="card mb-4">
       <div className="row items-center justify-between gap-y-3">
         <div className="row items-center">
-          <strong className="font-serif text-xl tracking-tight text-emerald-950">TruthTalent</strong>
+          <strong className="font-serif text-xl tracking-tight text-emerald-950">RecruitOS</strong>
           {items.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (

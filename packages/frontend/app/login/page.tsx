@@ -40,7 +40,7 @@ export default function LoginPage() {
           <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/45 blur-2xl" />
           <h1 className="mb-2 text-4xl text-emerald-950">A calmer way to hire with evidence</h1>
           <p className="max-w-md text-emerald-950/75">
-            TruthTalent helps teams screen fairly, trace model decisions, and focus on skill signal.
+            RecruitOS helps teams screen fairly, trace model decisions, and focus on skill signal.
           </p>
           <div className="mt-6 space-y-3 text-sm text-emerald-950/80">
             <p>Independent confidence scoring for every recommendation.</p>

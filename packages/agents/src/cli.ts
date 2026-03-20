@@ -42,7 +42,7 @@ async function main() {
 	// Load .env file
 	loadEnv();
 
-	console.log("\n🚀 TruthTalent Agents CLI\n");
+	console.log("\n🚀 RecruitOS Agents CLI\n");
 
 	// Get arguments
 	const args = process.argv.slice(2);
