@@ -74,6 +74,40 @@ export const api = {
     experience_level?: string;
   }) => request<{ job_id: number } & Record<string, unknown>>("/api/recruiter/generate-jd", { method: "POST", body: JSON.stringify(payload) }),
 
+  startJDGeneration: (payload: {
+    repos: string[];
+    rough_jd: string;
+    publish?: boolean;
+    location?: string;
+    employment_type?: string;
+    experience_level?: string;
+  }) => request<{ run_id: string; status: "queued" | "running" | "done" | "error" }>("/api/recruiter/generate-jd/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }),
+
+  jdGenerationRun: (runId: string) =>
+    request<{
+      id: string;
+      status: "queued" | "running" | "done" | "error";
+      created_at: number;
+      updated_at: number;
+      steps: Array<{
+        id: string;
+        label: string;
+        state: "pending" | "running" | "done" | "error";
+        detail: string;
+        at?: number;
+      }>;
+      events: Array<{
+        at: number;
+        level: "info" | "error";
+        message: string;
+      }>;
+      result?: { job_id?: number } & Record<string, unknown>;
+      error?: string;
+    }>(`/api/recruiter/generate-jd/runs/${encodeURIComponent(runId)}`),
+
   evaluateCandidate: (payload: {
     job_id?: number;
     github_username?: string;
@@ -83,6 +117,89 @@ export const api = {
     target_role?: string;
     required_skills?: string[];
   }) => request<EvaluationDetail>("/api/recruiter/evaluate-candidate", { method: "POST", body: JSON.stringify(payload) }),
+
+  evaluateCandidateResume: async (jobId: number, resume: File, githubUsername?: string) => {
+    const formData = new FormData();
+    formData.set("job_id", String(jobId));
+    formData.set("resume", resume);
+    if (githubUsername?.trim()) {
+      formData.set("github_username", githubUsername.trim());
+    }
+
+    const res = await fetch(buildUrl("/api/recruiter/evaluate-candidate-resume"), {
+      method: "POST",
+      body: formData,
+      cache: "no-store",
+    });
+
+    const raw = (await res.json()) as Record<string, unknown>;
+    if (!("success" in raw)) {
+      const message = typeof raw.message === "string" ? raw.message : `Request failed (${res.status})`;
+      throw new Error(message);
+    }
+
+    const json = raw as ApiResponse<EvaluationDetail>;
+    if (!json.success) {
+      const fallback = `Request failed (${res.status})`;
+      const message =
+        typeof json.error.message === "string"
+          ? json.error.message
+          : typeof raw.message === "string"
+            ? raw.message
+            : fallback;
+      throw new Error(message);
+    }
+
+    return json.data;
+  },
+
+  startEvaluateCandidateResume: async (jobId: number, resume: File, githubUsername?: string) => {
+    const formData = new FormData();
+    formData.set("job_id", String(jobId));
+    formData.set("resume", resume);
+    if (githubUsername?.trim()) {
+      formData.set("github_username", githubUsername.trim());
+    }
+
+    const res = await fetch(buildUrl("/api/recruiter/evaluate-candidate-resume/start"), {
+      method: "POST",
+      body: formData,
+      cache: "no-store",
+    });
+
+    const raw = (await res.json()) as Record<string, unknown>;
+    if (!("success" in raw)) {
+      const message = typeof raw.message === "string" ? raw.message : `Request failed (${res.status})`;
+      throw new Error(message);
+    }
+    const json = raw as ApiResponse<{ run_id: string; status: "queued" | "running" | "done" | "error" }>;
+    if (!json.success) {
+      throw new Error(typeof json.error.message === "string" ? json.error.message : `Request failed (${res.status})`);
+    }
+    return json.data;
+  },
+
+  evaluateCandidateResumeRun: (runId: string) =>
+    request<{
+      id: string;
+      status: "queued" | "running" | "done" | "error";
+      created_at: number;
+      updated_at: number;
+      steps: Array<{
+        id: string;
+        label: string;
+        state: "pending" | "running" | "done" | "error";
+        detail: string;
+        at?: number;
+      }>;
+      events: Array<{
+        at: number;
+        level: "info" | "error";
+        message: string;
+      }>;
+      result?: EvaluationDetail;
+      error?: string;
+    }>(`/api/recruiter/evaluate-candidate-resume/runs/${encodeURIComponent(runId)}`),
 
   recruiterCandidates: (jobId?: string | number, sort: "match_score" | "recency" | "confidence" = "match_score") => {
     const qs = new URLSearchParams();

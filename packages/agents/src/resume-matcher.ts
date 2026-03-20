@@ -5,7 +5,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { AgentLoop } from "./agent-loop.js";
 import { GitHubTools } from "./github-tools.js";
-import type { ResumeMatchInput, ResumeMatchReport, ResumeProfile } from "./types.js";
+import type { ResumeGithubProfile, ResumeMatchInput, ResumeMatchReport, ResumeProfile } from "./types.js";
 import { requireGeminiApiKey } from "./env.js";
 
 const RESUME_EXTRACTION_PROMPT = `Extract this resume into strict JSON.
@@ -45,6 +45,22 @@ Rules:
 - Do not hallucinate frameworks/tools.
 - Prefer precision over optimism.`;
 
+const RESUME_GITHUB_EXTRACTION_PROMPT = `Extract GitHub identity and project repositories from this resume.
+
+Return ONLY JSON in this shape:
+{
+  "github_username": "string",
+  "repositories": ["owner/repo"],
+  "github_urls": ["https://github.com/owner/repo"]
+}
+
+Rules:
+- repositories must be strict owner/repo values only
+- include repos only when confidence is medium or high
+- if username is missing, return empty string
+- use empty arrays when missing
+- do not include non-GitHub links`;
+
 export class ResumeMatcher {
 	private client: GoogleGenAI;
 	private apiKey: string;
@@ -54,8 +70,21 @@ export class ResumeMatcher {
 		this.client = new GoogleGenAI({ apiKey: this.apiKey });
 	}
 
-	async generateReport(input: ResumeMatchInput): Promise<ResumeMatchReport> {
+	async generateReport(
+		input: ResumeMatchInput,
+		options?: {
+			onProgress?: (event: { phase: string; message: string; payload?: Record<string, unknown> }) => void;
+		}
+	): Promise<ResumeMatchReport> {
+		options?.onProgress?.({
+			phase: "resume_parse",
+			message: "Parsing resume into structured profile",
+		});
 		const resumeProfile = await this.extractResumeProfile(input.resumePath);
+		options?.onProgress?.({
+			phase: "resume_parse_done",
+			message: "Resume profile parsed",
+		});
 
 		const githubTools = new GitHubTools();
 		const tools = githubTools.getAllTools();
@@ -66,6 +95,42 @@ export class ResumeMatcher {
 			tools,
 			maxIterations: 25,
 			apiKey: this.apiKey,
+			onEvent: (event) => {
+				if (event.type === "tool_called") {
+					options?.onProgress?.({
+						phase: "tool_call",
+						message: `Agent invoked ${event.name}`,
+						payload: { iteration: event.iteration, args: event.argsPreview },
+					});
+				} else if (event.type === "tool_result") {
+					options?.onProgress?.({
+						phase: "tool_result",
+						message: `${event.name} returned ${event.resultLength} chars`,
+						payload: { iteration: event.iteration },
+					});
+				} else if (event.type === "model_thought") {
+					options?.onProgress?.({
+						phase: "thought",
+						message: `Thought summary: ${event.textPreview}`,
+						payload: { iteration: event.iteration },
+					});
+				} else if (event.type === "iteration_started") {
+					options?.onProgress?.({
+						phase: "iteration",
+						message: `Iteration ${event.iteration}${event.maxIterations ? `/${event.maxIterations}` : ""}`,
+					});
+				} else if (event.type === "iteration_failed") {
+					options?.onProgress?.({
+						phase: "error",
+						message: event.error,
+					});
+				} else if (event.type === "run_completed") {
+					options?.onProgress?.({
+						phase: "done",
+						message: `Agent completed in ${event.iterations} iterations`,
+					});
+				}
+			},
 		});
 
 		const state = await agentLoop.run(prompt);
@@ -74,32 +139,31 @@ export class ResumeMatcher {
 		return this.parseMatchReport(finalResponse, resumeProfile, input);
 	}
 
+	async extractGithubProfile(resumePath: string): Promise<ResumeGithubProfile> {
+		const contents = await this.buildResumeContents(resumePath, RESUME_GITHUB_EXTRACTION_PROMPT);
+		const response = await (this.client.models as any).generateContent({
+			model: "gemini-3-flash-preview",
+			contents,
+		});
+
+		const text = this.extractText(response);
+		const parsed = this.parseJsonFromText(text);
+		const repositories = this.toStringArray(parsed.repositories)
+			.map((item) => this.normalizeRepo(item))
+			.filter(Boolean);
+
+		const githubUrls = this.toStringArray(parsed.github_urls).filter((url) => url.includes("github.com"));
+		const githubUsername = this.normalizeGithubUsername(parsed.github_username);
+
+		return {
+			github_username: githubUsername,
+			repositories: Array.from(new Set(repositories)),
+			github_urls: Array.from(new Set(githubUrls)),
+		};
+	}
+
 	private async extractResumeProfile(resumePath: string): Promise<ResumeProfile> {
-		const resumeFile = Bun.file(resumePath);
-		if (!(await resumeFile.exists())) {
-			throw new Error(`Resume file not found: ${resumePath}`);
-		}
-
-		const mimeType = this.getMimeType(resumePath);
-		let contents: unknown[];
-
-		if (mimeType === "application/pdf") {
-			const bytes = new Uint8Array(await resumeFile.arrayBuffer());
-			const base64Data = Buffer.from(bytes).toString("base64");
-			contents = [
-				{ text: RESUME_EXTRACTION_PROMPT },
-				{
-					inlineData: {
-						mimeType: "application/pdf",
-						data: base64Data,
-					},
-				},
-			];
-		} else {
-			const rawText = await resumeFile.text();
-			contents = [{ text: `${RESUME_EXTRACTION_PROMPT}\n\nResume Content:\n${rawText}` }];
-		}
-
+		const contents = await this.buildResumeContents(resumePath, RESUME_EXTRACTION_PROMPT);
 		const response = await (this.client.models as any).generateContent({
 			model: "gemini-3-flash-preview",
 			contents,
@@ -120,6 +184,33 @@ export class ResumeMatcher {
 			experience_highlights: this.toStringArray(parsed.experience_highlights),
 			projects: this.toStringArray(parsed.projects),
 		};
+	}
+
+	private async buildResumeContents(resumePath: string, prompt: string): Promise<unknown[]> {
+		const resumeFile = Bun.file(resumePath);
+		if (!(await resumeFile.exists())) {
+			throw new Error(`Resume file not found: ${resumePath}`);
+		}
+
+		const mimeType = this.getMimeType(resumePath);
+		let contents: unknown[];
+
+		if (mimeType === "application/pdf") {
+			const bytes = new Uint8Array(await resumeFile.arrayBuffer());
+			const base64Data = Buffer.from(bytes).toString("base64");
+			return [
+				{ text: prompt },
+				{
+					inlineData: {
+						mimeType: "application/pdf",
+						data: base64Data,
+					},
+				},
+			];
+		}
+
+		const rawText = await resumeFile.text();
+		return [{ text: `${prompt}\n\nResume Content:\n${rawText}` }];
 	}
 
 	private buildMatchPrompt(resume: ResumeProfile, input: ResumeMatchInput): string {
@@ -275,5 +366,23 @@ Be evidence-based and conservative with confidence.`;
 		if (lowerPath.endsWith(".txt")) return "text/plain";
 		if (lowerPath.endsWith(".html") || lowerPath.endsWith(".htm")) return "text/html";
 		return "text/plain";
+	}
+
+	private normalizeRepo(value: string): string {
+		const trimmed = value.trim();
+		if (!trimmed) return "";
+		const withoutPrefix = trimmed.replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "").replace(/[?#].*$/, "").replace(/\/$/, "");
+		const parts = withoutPrefix.split("/").filter(Boolean);
+		if (parts.length < 2) return "";
+		return `${parts[0]}/${parts[1]}`;
+	}
+
+	private normalizeGithubUsername(value: unknown): string {
+		if (typeof value !== "string") return "";
+		const trimmed = value.trim();
+		if (!trimmed) return "";
+		const withoutPrefix = trimmed.replace(/^https?:\/\/github\.com\//i, "").replace(/[?#].*$/, "").replace(/\/$/, "");
+		const first = withoutPrefix.split("/").filter(Boolean)[0];
+		return first || "";
 	}
 }

@@ -35,31 +35,45 @@ export default function LoginPage() {
 
   return (
     <main>
-      <div className="card" style={{ maxWidth: 500, margin: "40px auto" }}>
-        <h1>Login</h1>
-        <p className="muted">Access recruiter or candidate workspace.</p>
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: 10 }}>
-            <label>Username</label>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+      <div className="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-[1.2fr_1fr]">
+        <section className="card relative overflow-hidden">
+          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/45 blur-2xl" />
+          <h1 className="mb-2 text-4xl text-emerald-950">A calmer way to hire with evidence</h1>
+          <p className="max-w-md text-emerald-950/75">
+            TruthTalent helps teams screen fairly, trace model decisions, and focus on skill signal.
+          </p>
+          <div className="mt-6 space-y-3 text-sm text-emerald-950/80">
+            <p>Independent confidence scoring for every recommendation.</p>
+            <p>Structured traces so recruiters can audit each result.</p>
+            <p>Candidate-side insights that explain match quality clearly.</p>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label>Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as "candidate" | "recruiter") }>
-              <option value="candidate">Candidate</option>
-              <option value="recruiter">Recruiter</option>
-            </select>
-          </div>
-          {error ? <p style={{ color: "#8f2d1e" }}>{error}</p> : null}
-          <div className="row">
-            <button disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
-            <button type="button" className="secondary" onClick={() => router.push("/signup")}>Create account</button>
-          </div>
-        </form>
+        </section>
+        <div className="card">
+          <h1 className="mb-1 text-3xl text-emerald-950">Login</h1>
+          <p className="muted mb-5">Access recruiter or candidate workspace.</p>
+          <form onSubmit={onSubmit}>
+            <div className="mb-3">
+              <label>Username</label>
+              <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+            </div>
+            <div className="mb-3">
+              <label>Password</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <div className="mb-4">
+              <label>Role</label>
+              <select value={role} onChange={(e) => setRole(e.target.value as "candidate" | "recruiter") }>
+                <option value="candidate">Candidate</option>
+                <option value="recruiter">Recruiter</option>
+              </select>
+            </div>
+            {error ? <p className="mb-3 text-sm font-semibold text-red-800">{error}</p> : null}
+            <div className="row">
+              <button disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
+              <button type="button" className="secondary" onClick={() => router.push("/signup")}>Create account</button>
+            </div>
+          </form>
+        </div>
       </div>
     </main>
   );

@@ -75,6 +75,11 @@ export type EvaluationDetail = {
     candidate_level: string;
     evidence: Array<{ repo: string; loc: number; commits: number }>;
   }>;
+  detected?: {
+    github_username?: string;
+    repositories?: string[];
+    github_urls?: string[];
+  };
   created_at: number;
 };
 

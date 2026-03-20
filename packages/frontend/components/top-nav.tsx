@@ -22,19 +22,26 @@ export function TopNav() {
       ];
 
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <div className="row" style={{ alignItems: "center" }}>
-          <strong>TruthTalent</strong>
-          {items.map((item) => (
-            <Link key={item.href} href={item.href} style={{ opacity: pathname.startsWith(item.href) ? 1 : 0.65 }}>
-              {item.label}
-            </Link>
-          ))}
+    <div className="card mb-4">
+      <div className="row items-center justify-between gap-y-3">
+        <div className="row items-center">
+          <strong className="font-serif text-xl tracking-tight text-emerald-950">TruthTalent</strong>
+          {items.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-full px-3 py-1 text-sm transition ${isActive ? "bg-emerald-900 !text-emerald-50 hover:!text-emerald-50" : "bg-emerald-100/70 text-emerald-900/80 hover:bg-emerald-200/70"}`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
-        <div className="row" style={{ alignItems: "center" }}>
+        <div className="row items-center">
           <span className="badge">{user?.role || "guest"}</span>
-          {user?.username ? <span>{user.username}</span> : null}
+          {user?.username ? <span className="text-sm font-medium text-emerald-950/80">{user.username}</span> : null}
           {user ? (
             <button
               className="secondary"

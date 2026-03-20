@@ -43,8 +43,18 @@ export class JDGenerator {
 	/**
 	 * Generate a job description from GitHub repositories
 	 */
-	async generateJD(input: JDGenerationInput): Promise<JobDescription> {
+	async generateJD(
+		input: JDGenerationInput,
+		options?: {
+			onProgress?: (event: { phase: string; message: string; payload?: Record<string, unknown> }) => void;
+		}
+	): Promise<JobDescription> {
 		const apiKey = requireGeminiApiKey();
+		options?.onProgress?.({
+			phase: "init",
+			message: `Starting JD generation for ${input.repos.length} repositories`,
+			payload: { repos: input.repos },
+		});
 		console.log("\n" + "=".repeat(80));
 		console.log("🎯 TruthTalent JD Generator");
 		console.log("=".repeat(80));
@@ -64,8 +74,51 @@ export class JDGenerator {
 		const agentLoop = new AgentLoop({
 			systemPrompt: JD_GENERATION_SYSTEM_PROMPT,
 			tools,
-			maxIterations: 25, // Enough for ~10-15 files per repo
 			apiKey,
+				onEvent: (event) => {
+					if (event.type === "tool_called") {
+						options?.onProgress?.({
+							phase: "tool_call",
+							message: `Agent invoked ${event.name}`,
+							payload: { iteration: event.iteration, args: event.argsPreview },
+						});
+					} else if (event.type === "model_thought") {
+						options?.onProgress?.({
+							phase: "thought",
+							message: `Thought summary: ${event.textPreview}`,
+							payload: { iteration: event.iteration },
+						});
+					} else if (event.type === "tool_result") {
+						if (event.name === "think" && event.resultPreview) {
+							options?.onProgress?.({
+								phase: "thought",
+								message: `Thought summary: ${event.resultPreview.replace(/^Noted:\s*/, "")}`,
+								payload: { iteration: event.iteration },
+							});
+						} else {
+							options?.onProgress?.({
+								phase: "tool_result",
+								message: `${event.name} returned ${event.resultLength} chars`,
+								payload: { iteration: event.iteration },
+							});
+						}
+					} else if (event.type === "iteration_started") {
+					options?.onProgress?.({
+						phase: "iteration",
+						message: `Iteration ${event.iteration}${event.maxIterations ? `/${event.maxIterations}` : ""}`,
+					});
+				} else if (event.type === "run_completed") {
+					options?.onProgress?.({
+						phase: "finalize",
+						message: `Agent completed in ${event.iterations} iterations`,
+					});
+				} else if (event.type === "iteration_failed") {
+					options?.onProgress?.({
+						phase: "error",
+						message: event.error,
+					});
+				}
+			},
 		});
 
 		const state = await agentLoop.run(prompt);
@@ -75,6 +128,10 @@ export class JDGenerator {
 
 		// Parse the job description from the response
 		const jd = this.parseJobDescription(finalResponse, input);
+		options?.onProgress?.({
+			phase: "parsed",
+			message: "Parsed generated JD response into structured format",
+		});
 
 		console.log("\n" + "=".repeat(80));
 		console.log("✅ Job Description Generated!");

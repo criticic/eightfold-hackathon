@@ -11,6 +11,70 @@ export class AgentLoop {
 	private config: AgentConfig;
 	private interactionId?: string;
 
+	private normalizeThoughtSummary(value: unknown): string {
+		if (typeof value === "string") return value;
+		if (!value) return "";
+
+		if (Array.isArray(value)) {
+			const joined = value
+				.map((part) => {
+					if (typeof part === "string") return part;
+					if (part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string") {
+						return (part as { text: string }).text;
+					}
+					return "";
+				})
+				.filter(Boolean)
+				.join(" ");
+			if (joined) return joined;
+		}
+
+		if (typeof value === "object") {
+			const maybeText = (value as { text?: unknown }).text;
+			if (typeof maybeText === "string") return maybeText;
+
+			const maybeContent = (value as { content?: unknown }).content;
+			if (typeof maybeContent === "string") return maybeContent;
+			if (Array.isArray(maybeContent)) {
+				const joined = maybeContent
+					.map((part) => {
+						if (typeof part === "string") return part;
+						if (part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string") {
+							return (part as { text: string }).text;
+						}
+						return "";
+					})
+					.filter(Boolean)
+					.join(" ");
+				if (joined) return joined;
+			}
+
+			try {
+				return JSON.stringify(value);
+			} catch {
+				return "";
+			}
+		}
+
+		return String(value);
+	}
+
+	private stripMarkdown(value: string): string {
+		return value
+			.replace(/```[\s\S]*?```/g, " ")
+			.replace(/`([^`]+)`/g, "$1")
+			.replace(/\*\*([^*]+)\*\*/g, "$1")
+			.replace(/\*([^*]+)\*/g, "$1")
+			.replace(/__([^_]+)__/g, "$1")
+			.replace(/_([^_]+)_/g, "$1")
+			.replace(/^#{1,6}\s+/gm, "")
+			.replace(/^[-*+]\s+/gm, "")
+			.replace(/^\d+\.\s+/gm, "")
+			.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
+			.replace(/\s+/g, " ")
+			.trim();
+	}
+
 	constructor(config: AgentConfig) {
 		this.config = config;
 		this.client = new GoogleGenAI({ apiKey: this.config.apiKey });
@@ -32,7 +96,12 @@ export class AgentLoop {
 	 * Execute a single iteration of the agent loop
 	 */
 	private async executeIteration(state: AgentState): Promise<AgentState> {
-		console.log(`\n[Iteration ${state.currentIteration}/${state.maxIterations}]`);
+		console.log(`\n[Iteration ${state.currentIteration}/${state.maxIterations ?? "unbounded"}]`);
+		this.config.onEvent?.({
+			type: "iteration_started",
+			iteration: state.currentIteration,
+			maxIterations: state.maxIterations,
+		});
 
 		// Build the input - either first message or continuation
 		let input: any;
@@ -88,6 +157,9 @@ export class AgentLoop {
 				input,
 				tools: this.toolsToFunctionDeclarations(),
 				system_instruction: state.systemPrompt,
+				generation_config: {
+					thinking_summaries: "auto",
+				},
 			};
 
 			// If we have a previous interaction, continue from it
@@ -96,6 +168,7 @@ export class AgentLoop {
 			}
 
 			console.log("📤 Sending request to Gemini...");
+			this.config.onEvent?.({ type: "model_request", iteration: state.currentIteration });
 			const interaction = await this.client.interactions.create(interactionConfig);
 
 			// Save interaction ID for continuation
@@ -111,8 +184,27 @@ export class AgentLoop {
 			for (const output of outputs) {
 				console.log(`\n📝 Output type: ${output.type}`);
 
+				if (output.type === "thought") {
+					const summaryText = this.normalizeThoughtSummary((output as any).summary || output.text || "");
+					const preview = this.stripMarkdown(summaryText);
+					if (preview) {
+						console.log(`🧠 ${preview}`);
+						this.config.onEvent?.({
+							type: "model_thought",
+							iteration: state.currentIteration,
+							textPreview: preview,
+						});
+					}
+				}
+
 				if (output.type === "text" && output.text) {
-					console.log(`💭 ${output.text.slice(0, 200)}...`);
+					const preview = output.text.slice(0, 240);
+					console.log(`💭 ${preview}...`);
+					this.config.onEvent?.({
+						type: "model_text",
+						iteration: state.currentIteration,
+						textPreview: preview,
+					});
 				}
 
 				if (output.type === "function_call") {
@@ -120,6 +212,12 @@ export class AgentLoop {
 					functionCalls.push(output);
 					console.log(`🔧 Tool call: ${output.name}`);
 					console.log(`   Args:`, JSON.stringify(output.arguments, null, 2));
+					this.config.onEvent?.({
+						type: "tool_called",
+						iteration: state.currentIteration,
+						name: output.name,
+						argsPreview: JSON.stringify(output.arguments).slice(0, 240),
+					});
 				}
 			}
 
@@ -154,6 +252,13 @@ export class AgentLoop {
 					try {
 						const result = await tool.execute(call.arguments);
 						console.log(`✅ Tool result (${result.length} chars)`);
+					this.config.onEvent?.({
+						type: "tool_result",
+						iteration: state.currentIteration,
+						name: call.name,
+						resultLength: result.length,
+						resultPreview: this.stripMarkdown(result),
+					});
 						toolResults.push({
 							type: "tool_result",
 							tool_call_id: toolCallId,
@@ -199,6 +304,11 @@ export class AgentLoop {
 			}
 		} catch (error) {
 			console.error(`❌ Error in iteration ${state.currentIteration}:`, error);
+			this.config.onEvent?.({
+				type: "iteration_failed",
+				iteration: state.currentIteration,
+				error: error instanceof Error ? error.message : String(error),
+			});
 			throw error;
 		}
 	}
@@ -227,16 +337,22 @@ export class AgentLoop {
 
 		console.log("🚀 Starting agent loop...");
 		console.log(`📝 Initial prompt: ${initialPrompt.slice(0, 200)}...`);
+		this.config.onEvent?.({ type: "run_started", promptPreview: initialPrompt.slice(0, 240) });
 
-		while (!state.isComplete && state.currentIteration <= state.maxIterations) {
+		while (!state.isComplete && (state.maxIterations === undefined || state.currentIteration <= state.maxIterations)) {
 			await this.executeIteration(state);
 		}
 
-		if (!state.isComplete) {
+		if (!state.isComplete && state.maxIterations !== undefined) {
 			console.log(`\n⚠️  Reached max iterations (${state.maxIterations})`);
 		}
 
 		console.log(`\n✅ Agent loop completed after ${state.currentIteration - 1} iterations`);
+		this.config.onEvent?.({
+			type: "run_completed",
+			iterations: state.currentIteration - 1,
+			complete: state.isComplete,
+		});
 		return state;
 	}
 

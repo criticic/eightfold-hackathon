@@ -23,8 +23,10 @@ export const loadBackendEnv = () => {
 		resolve(process.cwd(), ".env"),
 		resolve(process.cwd(), "packages/backend/.env"),
 		resolve(process.cwd(), "../.env"),
+		resolve(process.cwd(), "../../.env"),
 		resolve(import.meta.dir, "../../.env"),
 		resolve(import.meta.dir, "../../../.env"),
+		resolve(import.meta.dir, "../../../../.env"),
 	];
 
 	for (const filePath of candidates) {

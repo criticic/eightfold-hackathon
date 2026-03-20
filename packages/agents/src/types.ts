@@ -45,7 +45,7 @@ export interface AgentState {
 	tools: Tool[];
 	systemPrompt: string;
 	currentIteration: number;
-	maxIterations: number;
+	maxIterations?: number;
 	isComplete: boolean;
 	metadata: Record<string, unknown>;
 }
@@ -53,9 +53,21 @@ export interface AgentState {
 export interface AgentConfig {
 	systemPrompt: string;
 	tools: Tool[];
-	maxIterations: number;
+	maxIterations?: number;
 	apiKey: string;
+	onEvent?: (event: AgentEvent) => void;
 }
+
+export type AgentEvent =
+	| { type: "run_started"; promptPreview: string }
+	| { type: "iteration_started"; iteration: number; maxIterations?: number }
+	| { type: "model_request"; iteration: number }
+	| { type: "model_text"; iteration: number; textPreview: string }
+	| { type: "model_thought"; iteration: number; textPreview: string }
+	| { type: "tool_called"; iteration: number; name: string; argsPreview: string }
+	| { type: "tool_result"; iteration: number; name: string; resultLength: number; resultPreview?: string }
+	| { type: "iteration_failed"; iteration: number; error: string }
+	| { type: "run_completed"; iterations: number; complete: boolean };
 
 // GitHub-specific types
 export interface GitHubFileInfo {
@@ -133,6 +145,12 @@ export interface ResumeMatchInput {
 	repos: string[];
 	targetRole?: string;
 	githubUsername?: string;
+}
+
+export interface ResumeGithubProfile {
+	github_username: string;
+	repositories: string[];
+	github_urls: string[];
 }
 
 export interface VerifiedSkill {

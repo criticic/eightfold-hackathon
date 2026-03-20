@@ -3,7 +3,7 @@ import { cors } from "@elysiajs/cors";
 import { authRoutes } from "./routes/auth.js";
 import { recruiterRoutes } from "./routes/recruiter.js";
 import { candidateRoutes } from "./routes/candidate.js";
-import { hasGeminiApiKey } from "./services/env.js";
+import { hasGeminiApiKey, hasGithubToken } from "./services/env.js";
 import { loadBackendEnv } from "./services/load-env.js";
 
 loadBackendEnv();
@@ -22,6 +22,7 @@ const app = new Elysia()
 		success: true,
 		data: {
 			has_gemini_key: hasGeminiApiKey(),
+			has_github_token: hasGithubToken(),
 		},
 	}))
 	.use(authRoutes)

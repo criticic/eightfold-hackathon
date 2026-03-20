@@ -26,24 +26,30 @@ export default function RecruiterJDDetailPage() {
         {error ? <p style={{ color: "#8f2d1e" }}>{error}</p> : null}
         {!job ? <p className="muted">Loading...</p> : null}
         {job ? (
-          <div className="card">
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <h1>{job.title}</h1>
-              <span className="badge">{job.status || "draft"}</span>
+          <>
+            <div className="card mb-4">
+              <div className="row justify-between">
+                <h1 className="m-0 text-3xl text-emerald-950">{job.title}</h1>
+                <span className="badge">{job.status || "draft"}</span>
+              </div>
+              <p className="muted mt-2">{job.location || "Location TBD"} {job.employment_type ? `• ${job.employment_type}` : ""}</p>
+              <div className="row mt-3">
+                <Link href={`/recruiter/jds/${job.id}/candidates`}>View ranked candidates</Link>
+              </div>
             </div>
-            <p className="muted">{job.location || "Location TBD"} {job.employment_type ? `• ${job.employment_type}` : ""}</p>
-            <h3>Detailed JD</h3>
-            <pre style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{job.detailed_jd || job.jd_text}</pre>
+
+            <div className="card mb-4">
+              <h3 className="mt-0 text-2xl text-emerald-950">Detailed JD</h3>
+              <pre className="m-0 whitespace-pre-wrap leading-7">{job.detailed_jd || job.jd_text}</pre>
+            </div>
+
             {job.anonymized_jd ? (
-              <>
-                <h3>Public JD</h3>
-                <pre style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{job.anonymized_jd}</pre>
-              </>
+              <div className="card">
+                <h3 className="mt-0 text-2xl text-emerald-950">Public JD</h3>
+                <pre className="m-0 whitespace-pre-wrap leading-7">{job.anonymized_jd}</pre>
+              </div>
             ) : null}
-            <div className="row">
-              <Link href={`/recruiter/jds/${job.id}/candidates`}>View ranked candidates</Link>
-            </div>
-          </div>
+          </>
         ) : null}
       </main>
     </AuthGuard>

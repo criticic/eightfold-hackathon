@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { JDGenerator, ResumeMatcher } from "@truthtalent/agents";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { writeFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +13,136 @@ import { hasGeminiApiKey } from "../services/env.js";
 const makeCacheKey = (namespace: string, payload: unknown): string => {
 	const digest = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 	return `${namespace}:${digest}`;
+};
+
+type JDStepState = "pending" | "running" | "done" | "error";
+type JDRunStatus = "queued" | "running" | "done" | "error";
+
+type JDRunStep = {
+	id: string;
+	label: string;
+	state: JDStepState;
+	detail: string;
+	at?: number;
+};
+
+type JDRun = {
+	id: string;
+	status: JDRunStatus;
+	created_at: number;
+	updated_at: number;
+	steps: JDRunStep[];
+	events: Array<{ at: number; level: "info" | "error"; message: string }>;
+	result?: Record<string, unknown>;
+	error?: string;
+};
+
+const jdRuns = new Map<string, JDRun>();
+const resumeEvalRuns = new Map<string, JDRun>();
+
+const createJDRunSteps = (repos: string[], publish?: boolean): JDRunStep[] => [
+	{
+		id: "validate",
+		label: "Validate request",
+		state: "pending",
+		detail: `Checking ${repos.length} repositories and input context`,
+	},
+	{
+		id: "analyze",
+		label: "Analyze repositories",
+		state: "pending",
+		detail: "Building codebase skill and architecture signals",
+	},
+	{
+		id: "compose",
+		label: "Compose JD",
+		state: "pending",
+		detail: "Drafting role scope, responsibilities, and requirements",
+	},
+	{
+		id: "normalize",
+		label: "Prepare anonymized version",
+		state: "pending",
+		detail: "Generating anonymized wording for unbiased screening",
+	},
+	{
+		id: "persist",
+		label: "Save posting",
+		state: "pending",
+		detail: publish ? "Saving and publishing the job" : "Saving draft job posting",
+	},
+];
+
+const createResumeEvalSteps = (): JDRunStep[] => [
+	{
+		id: "validate",
+		label: "Validate input",
+		state: "pending",
+		detail: "Checking job, resume PDF, and GitHub username",
+	},
+	{
+		id: "resume_parse",
+		label: "Parse resume",
+		state: "pending",
+		detail: "Converting resume into structured text profile",
+	},
+	{
+		id: "evaluate",
+		label: "Evaluate candidate",
+		state: "pending",
+		detail: "Loading GitHub repos and matching against JD requirements",
+	},
+	{
+		id: "persist",
+		label: "Save evaluation",
+		state: "pending",
+		detail: "Persisting score, trace, and detected profile",
+	},
+];
+
+const updateJDRun = (runId: string, mutate: (run: JDRun) => void) => {
+	const run = jdRuns.get(runId);
+	if (!run) return;
+	mutate(run);
+	run.updated_at = Date.now();
+	jdRuns.set(runId, run);
+};
+
+const setStepState = (run: JDRun, stepIndex: number, state: JDStepState, detail?: string) => {
+	const step = run.steps[stepIndex];
+	if (!step) return;
+	step.state = state;
+	step.at = Date.now();
+	if (detail) {
+		step.detail = detail;
+	}
+};
+
+const appendRunEvent = (run: JDRun, message: string, level: "info" | "error" = "info") => {
+	run.events.push({ at: Date.now(), level, message });
+	if (run.events.length > 320) {
+		run.events = run.events.slice(-320);
+	}
+};
+
+const updateResumeEvalRun = (runId: string, mutate: (run: JDRun) => void) => {
+	const run = resumeEvalRuns.get(runId);
+	if (!run) return;
+	mutate(run);
+	run.updated_at = Date.now();
+	resumeEvalRuns.set(runId, run);
+};
+
+const finalizeResumeEvalError = (runId: string, message: string) => {
+	updateResumeEvalRun(runId, (run) => {
+		const activeStep = run.steps.findIndex((step) => step.state === "running");
+		if (activeStep >= 0) {
+			setStepState(run, activeStep, "error", message);
+		}
+		appendRunEvent(run, message, "error");
+		run.status = "error";
+		run.error = message;
+	});
 };
 
 const safeParse = (value: string | null | undefined): Record<string, any> => {
@@ -29,6 +159,48 @@ const normalizeRepoInput = (value: string): string => {
 	if (!trimmed) return "";
 	const withoutProtocol = trimmed.replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, "");
 	return withoutProtocol;
+};
+
+const fetchGithubReposForUser = async (githubUsername: string): Promise<string[]> => {
+	const token = process.env.GITHUB_TOKEN;
+	const headers: Record<string, string> = {
+		Accept: "application/vnd.github+json",
+		"User-Agent": "truthtalent-backend",
+	};
+	if (token) {
+		headers.Authorization = `Bearer ${token}`;
+	}
+
+	const repos: string[] = [];
+	let page = 1;
+
+	while (page <= 3) {
+		const res = await fetch(`https://api.github.com/users/${encodeURIComponent(githubUsername)}/repos?per_page=100&page=${page}&type=all&sort=updated`, {
+			headers,
+		});
+
+		if (!res.ok) {
+			throw new Error(`Failed to load repositories for ${githubUsername}: ${res.status}`);
+		}
+
+		const data = (await res.json()) as Array<{ full_name?: string }>;
+		if (!Array.isArray(data) || data.length === 0) {
+			break;
+		}
+
+		for (const repo of data) {
+			if (typeof repo.full_name === "string" && repo.full_name.includes("/")) {
+				repos.push(normalizeRepoInput(repo.full_name));
+			}
+		}
+
+		if (data.length < 100) {
+			break;
+		}
+		page++;
+	}
+
+	return Array.from(new Set(repos.filter(Boolean)));
 };
 
 const resolveResumePath = async (resumePath?: string, resumeText?: string): Promise<string> => {
@@ -108,6 +280,294 @@ const mapJobPosting = (row: typeof jobPostings.$inferSelect) => {
 		experience_level: row.experience_level || "",
 		created_at: row.created_at,
 	};
+};
+
+type GenerateJDBody = {
+	repos: string[];
+	rough_jd: string;
+	publish?: boolean;
+	location?: string;
+	employment_type?: string;
+	experience_level?: string;
+};
+
+const finalizeJDRunError = (runId: string, message: string) => {
+	updateJDRun(runId, (run) => {
+		const activeStep = run.steps.findIndex((step) => step.state === "running");
+		if (activeStep >= 0) {
+			setStepState(run, activeStep, "error", message);
+		}
+		appendRunEvent(run, message, "error");
+		run.status = "error";
+		run.error = message;
+	});
+};
+
+const executeJDRun = async (runId: string, payload: GenerateJDBody) => {
+	const repos = payload.repos.map((repo) => repo.trim()).filter(Boolean);
+	const cacheKey = makeCacheKey("jd", payload);
+
+	updateJDRun(runId, (run) => {
+		run.status = "running";
+		setStepState(run, 0, "running");
+		appendRunEvent(run, "Run started");
+	});
+
+	const cached = await getCached<unknown>(cacheKey);
+	if (cached) {
+		const cachedRecord = cached as Record<string, unknown>;
+		if (
+			typeof cachedRecord.detailed_version === "string" &&
+			cachedRecord.detailed_version.startsWith("Error: Could not resolve authentication method")
+		) {
+			await deleteCached(cacheKey);
+		} else {
+			updateJDRun(runId, (run) => {
+				for (let i = 0; i < run.steps.length; i++) {
+					setStepState(run, i, "done");
+				}
+				appendRunEvent(run, "Cache hit, reused existing JD output");
+				run.status = "done";
+				run.result = cachedRecord;
+			});
+			return;
+		}
+	}
+
+	updateJDRun(runId, (run) => {
+		setStepState(run, 0, "done", `Validated ${repos.length} repositories`);
+		setStepState(run, 1, "running");
+		appendRunEvent(run, `Validated input with ${repos.length} repositories`);
+	});
+
+	const generator = new JDGenerator();
+	let result;
+	try {
+		result = await generator.generateJD(
+			{
+				repos,
+				rough_jd: payload.rough_jd,
+			},
+			{
+				onProgress: (event) => {
+					updateJDRun(runId, (run) => {
+						appendRunEvent(run, event.message, event.phase === "error" ? "error" : "info");
+						if (event.phase === "tool_call") {
+							setStepState(run, 1, "running", event.message);
+						} else if (event.phase === "iteration") {
+							setStepState(run, 1, "running", event.message);
+						} else if (event.phase === "finalize") {
+							setStepState(run, 2, "running", event.message);
+						} else if (event.phase === "parsed") {
+							setStepState(run, 2, "done", event.message);
+							setStepState(run, 3, "running");
+						} else if (event.phase === "error") {
+							setStepState(run, 1, "error", event.message);
+						}
+					});
+				},
+			}
+		);
+	} catch (error) {
+		finalizeJDRunError(runId, error instanceof Error ? error.message : "JD generation failed");
+		return;
+	}
+
+	if (result.detailed_version.startsWith("Error:") || result.anonymized_version.startsWith("Error:")) {
+		finalizeJDRunError(runId, "JD generation failed due to upstream model authentication/runtime error");
+		return;
+	}
+
+	updateJDRun(runId, (run) => {
+		if (run.steps[1]?.state !== "done") {
+			setStepState(run, 1, "done", "Repository analysis complete");
+		}
+		if (run.steps[2]?.state !== "done") {
+			setStepState(run, 2, "done", "Drafted detailed JD output");
+		}
+		setStepState(run, 3, "done", "Prepared anonymized JD output");
+		setStepState(run, 4, "running");
+		appendRunEvent(run, "Agent output parsed and normalized");
+	});
+
+	const now = Date.now();
+	const inserted = await db
+		.insert(jobPostings)
+		.values({
+			title: result.title,
+			jd_text: result.detailed_version,
+			anonymized_jd: result.anonymized_version,
+			required_skills: JSON.stringify({
+				required_skills: result.required_skills,
+				anonymized_version: result.anonymized_version,
+				evidence: result.evidence,
+				rough_jd: payload.rough_jd,
+				repos,
+			}),
+			status: payload.publish ? "published" : "draft",
+			location: payload.location || null,
+			employment_type: payload.employment_type || null,
+			experience_level: payload.experience_level || result.experience_level || null,
+			created_at: now,
+		})
+		.returning({ id: jobPostings.id });
+
+	const responseData = {
+		job_id: inserted[0]?.id,
+		...result,
+	};
+
+	await setCached(cacheKey, "jd", responseData);
+
+	updateJDRun(runId, (run) => {
+		setStepState(run, 4, "done", "Job posting saved successfully");
+		appendRunEvent(run, "Persisted generated JD and completed run");
+		run.status = "done";
+		run.result = responseData;
+	});
+};
+
+const executeResumeEvalRun = async (runId: string, payload: { jobId: number; resumePath: string; githubUsername: string }) => {
+	updateResumeEvalRun(runId, (run) => {
+		run.status = "running";
+		setStepState(run, 0, "running");
+		appendRunEvent(run, "Run started");
+	});
+
+	try {
+		const jobRows = await db.select().from(jobPostings).where(eq(jobPostings.id, payload.jobId)).limit(1);
+		if (jobRows.length === 0) {
+			finalizeResumeEvalError(runId, "Job not found");
+			return;
+		}
+
+		const job = jobRows[0];
+		updateResumeEvalRun(runId, (run) => {
+			setStepState(run, 0, "done", "Validated resume upload and job context");
+			setStepState(run, 1, "running");
+			appendRunEvent(run, "Validated input and loaded job");
+		});
+
+		const matcher = new ResumeMatcher();
+		const preferredGithubUsername = payload.githubUsername.trim();
+		const repos = await fetchGithubReposForUser(preferredGithubUsername);
+
+		if (repos.length === 0) {
+			finalizeResumeEvalError(runId, `No repositories found for GitHub user ${preferredGithubUsername}`);
+			return;
+		}
+
+		updateResumeEvalRun(runId, (run) => {
+			setStepState(run, 1, "done", "Resume parsed into structured profile");
+			appendRunEvent(run, `Using GitHub username: ${preferredGithubUsername}`);
+			appendRunEvent(run, `Loaded ${repos.length} repositories from GitHub`);
+			setStepState(run, 2, "running");
+		});
+
+		const report = await matcher.generateReport({
+				resumePath: payload.resumePath,
+				repos,
+				targetRole: job.jd_text,
+				githubUsername: preferredGithubUsername || undefined,
+			},
+			{
+				onProgress: (event) => {
+					updateResumeEvalRun(runId, (run) => {
+						appendRunEvent(run, event.message, event.phase === "error" ? "error" : "info");
+						if (event.phase === "iteration" || event.phase === "tool_call") {
+							setStepState(run, 2, "running", event.message);
+						}
+					});
+				},
+			}
+		);
+
+		const required = extractSkills(job.jd_text);
+		const verified = [...report.verified_skills, ...report.partially_verified_skills];
+		const matched_skills = verified.map((skill) => skill.skill).filter((skill) => required.length === 0 || required.includes(skill));
+		const missing_skills = report.missing_for_role.length > 0 ? report.missing_for_role : required.filter((skill) => !matched_skills.includes(skill));
+
+		const confidenceScore = Math.round(
+			(verified.filter((skill) => skill.confidence === "high").length * 100 + verified.filter((skill) => skill.confidence === "medium").length * 70 + verified.filter((skill) => skill.confidence === "low").length * 40) /
+				Math.max(1, verified.length)
+		);
+
+		const trace = buildTraceFromReport(report as Record<string, any>, repos);
+		const result = {
+			match_score: report.overall_match_score,
+			matched_skills,
+			missing_skills,
+			reasoning: report.explanation,
+			candidate_summary: {
+				username: preferredGithubUsername || "unknown",
+				total_repos: repos.length,
+				total_commits: 0,
+				primary_languages: report.verified_skills.slice(0, 5).map((skill) => skill.skill),
+			},
+			skill_breakdown: required.slice(0, 16).map((skill) => {
+				const found = verified.find((item) => item.skill.toLowerCase() === skill.toLowerCase());
+				return {
+					skill,
+					required: true,
+					candidate_level: found ? (found.confidence === "high" ? "expert" : found.confidence === "medium" ? "intermediate" : "beginner") : "none",
+					evidence: (found?.evidence_files || []).slice(0, 4).map((filePath) => ({
+						repo: filePath.split("/").slice(0, 2).join("/"),
+						loc: 0,
+						commits: 0,
+					})),
+				};
+			}),
+			confidence: confidenceScore,
+			trace,
+			agentic_report: report,
+			detected: {
+				github_username: preferredGithubUsername,
+				repositories: repos,
+				github_urls: repos.map((repo) => `https://github.com/${repo}`),
+			},
+		};
+
+		updateResumeEvalRun(runId, (run) => {
+			setStepState(run, 2, "done", `Computed score ${report.overall_match_score}`);
+			setStepState(run, 3, "running");
+			appendRunEvent(run, "Candidate evaluation completed, persisting results");
+		});
+
+		const inserted = await db
+			.insert(evaluations)
+			.values({
+				job_posting_id: payload.jobId,
+				github_username: preferredGithubUsername || "unknown",
+				match_score: report.overall_match_score,
+				confidence: confidenceScore,
+				matched_count: matched_skills.length,
+				missing_count: missing_skills.length,
+				evaluation_data: JSON.stringify(result),
+				trace_data: JSON.stringify(trace),
+				created_at: Date.now(),
+			})
+			.returning({ id: evaluations.id });
+
+		if (inserted[0]?.id) {
+			await db.insert(agentRuns).values({
+				evaluation_id: inserted[0].id,
+				run_type: "candidate_evaluation",
+				trace: JSON.stringify(trace),
+				created_at: Date.now(),
+			});
+		}
+
+		updateResumeEvalRun(runId, (run) => {
+			setStepState(run, 3, "done", "Saved evaluation and trace");
+			appendRunEvent(run, "Evaluation run completed");
+			run.status = "done";
+			run.result = { evaluation_id: inserted[0]?.id, ...result };
+		});
+	} catch (error) {
+		finalizeResumeEvalError(runId, error instanceof Error ? error.message : "Resume evaluation failed");
+	} finally {
+		await unlink(payload.resumePath).catch(() => undefined);
+	}
 };
 
 export const recruiterRoutes = new Elysia({ prefix: "/api/recruiter" })
@@ -450,6 +910,77 @@ export const recruiterRoutes = new Elysia({ prefix: "/api/recruiter" })
 		}
 	)
 	.post(
+		"/generate-jd/start",
+		async ({ body, status }) => {
+			const repos = body.repos.map((repo) => repo.trim()).filter(Boolean);
+			if (repos.length === 0) {
+				return status(400, {
+					success: false,
+					error: {
+						code: "INVALID_REPOS",
+						message: "At least one repository is required",
+					},
+				});
+			}
+
+			const runId = randomUUID();
+			const now = Date.now();
+			jdRuns.set(runId, {
+				id: runId,
+				status: "queued",
+				created_at: now,
+				updated_at: now,
+				steps: createJDRunSteps(repos, body.publish),
+				events: [{ at: now, level: "info", message: "Queued JD generation run" }],
+			});
+
+			void executeJDRun(runId, { ...body, repos });
+
+			return {
+				success: true,
+				data: {
+					run_id: runId,
+					status: "queued",
+				},
+			};
+		},
+		{
+			body: t.Object({
+				repos: t.Array(t.String({ minLength: 3 })),
+				rough_jd: t.String({ minLength: 3 }),
+				publish: t.Optional(t.Boolean()),
+				location: t.Optional(t.String()),
+				employment_type: t.Optional(t.String()),
+				experience_level: t.Optional(t.String()),
+			}),
+		}
+	)
+	.get(
+		"/generate-jd/runs/:runId",
+		async ({ params, status }) => {
+			const run = jdRuns.get(params.runId);
+			if (!run) {
+				return status(404, {
+					success: false,
+					error: {
+						code: "RUN_NOT_FOUND",
+						message: "JD generation run not found",
+					},
+				});
+			}
+
+			return {
+				success: true,
+				data: run,
+			};
+		},
+		{
+			params: t.Object({
+				runId: t.String({ minLength: 1 }),
+			}),
+		}
+	)
+	.post(
 		"/generate-jd",
 		async ({ body, status }) => {
 			const repos = body.repos.map((repo) => repo.trim()).filter(Boolean);
@@ -630,6 +1161,292 @@ export const recruiterRoutes = new Elysia({ prefix: "/api/recruiter" })
 			}),
 		}
 	)
+	.post("/evaluate-candidate-resume/start", async ({ request, status }) => {
+		if (!hasGeminiApiKey()) {
+			return status(500, {
+				success: false,
+				error: {
+					code: "MISSING_GOOGLE_API_KEY",
+					message: "GOOGLE_API_KEY or GEMINI_API_KEY is required for agentic candidate evaluation",
+				},
+			});
+		}
+
+		const form = await request.formData();
+		const jobIdRaw = form.get("job_id");
+		const resume = form.get("resume");
+		const githubUsernameRaw = form.get("github_username");
+		const githubUsername = typeof githubUsernameRaw === "string" ? githubUsernameRaw.trim() : "";
+
+		const jobId = Number(jobIdRaw);
+		if (!Number.isFinite(jobId) || jobId <= 0) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_JOB_ID",
+					message: "Valid job_id is required",
+				},
+			});
+		}
+
+		if (!(resume instanceof File)) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_RESUME",
+					message: "Resume PDF file is required",
+				},
+			});
+		}
+
+		if (resume.type !== "application/pdf") {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_RESUME_TYPE",
+					message: "Resume must be a PDF",
+				},
+			});
+		}
+
+		if (!githubUsername) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_GITHUB_USERNAME",
+					message: "GitHub username is required",
+				},
+			});
+		}
+
+		const runId = randomUUID();
+		const now = Date.now();
+		const resumePath = join(tmpdir(), `resume-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+		await writeFile(resumePath, Buffer.from(await resume.arrayBuffer()));
+
+		resumeEvalRuns.set(runId, {
+			id: runId,
+			status: "queued",
+			created_at: now,
+			updated_at: now,
+			steps: createResumeEvalSteps(),
+			events: [{ at: now, level: "info", message: "Queued resume evaluation run" }],
+		});
+
+		void executeResumeEvalRun(runId, {
+			jobId,
+			resumePath,
+			githubUsername,
+		});
+
+		return {
+			success: true,
+			data: {
+				run_id: runId,
+				status: "queued",
+			},
+		};
+	})
+	.get(
+		"/evaluate-candidate-resume/runs/:runId",
+		async ({ params, status }) => {
+			const run = resumeEvalRuns.get(params.runId);
+			if (!run) {
+				return status(404, {
+					success: false,
+					error: {
+						code: "RUN_NOT_FOUND",
+						message: "Resume evaluation run not found",
+					},
+				});
+			}
+
+			return {
+				success: true,
+				data: run,
+			};
+		},
+		{
+			params: t.Object({
+				runId: t.String({ minLength: 1 }),
+			}),
+		}
+	)
+	.post("/evaluate-candidate-resume", async ({ request, status }) => {
+		if (!hasGeminiApiKey()) {
+			return status(500, {
+				success: false,
+				error: {
+					code: "MISSING_GOOGLE_API_KEY",
+					message: "GOOGLE_API_KEY or GEMINI_API_KEY is required for agentic candidate evaluation",
+				},
+			});
+		}
+
+		const form = await request.formData();
+		const jobIdRaw = form.get("job_id");
+		const resume = form.get("resume");
+		const githubUsernameRaw = form.get("github_username");
+		const githubUsername = typeof githubUsernameRaw === "string" ? githubUsernameRaw.trim() : "";
+
+		const jobId = Number(jobIdRaw);
+		if (!Number.isFinite(jobId) || jobId <= 0) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_JOB_ID",
+					message: "Valid job_id is required",
+				},
+			});
+		}
+
+		if (!(resume instanceof File)) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_RESUME",
+					message: "Resume PDF file is required",
+				},
+			});
+		}
+
+		if (resume.type !== "application/pdf") {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_RESUME_TYPE",
+					message: "Resume must be a PDF",
+				},
+			});
+		}
+
+		if (!githubUsername) {
+			return status(400, {
+				success: false,
+				error: {
+					code: "INVALID_GITHUB_USERNAME",
+					message: "GitHub username is required",
+				},
+			});
+		}
+
+		const jobRows = await db.select().from(jobPostings).where(eq(jobPostings.id, jobId)).limit(1);
+		if (jobRows.length === 0) {
+			return status(404, {
+				success: false,
+				error: {
+					code: "JOB_NOT_FOUND",
+					message: "Job not found",
+				},
+			});
+		}
+
+		const job = jobRows[0];
+		const resumePath = join(tmpdir(), `resume-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+
+		await writeFile(resumePath, Buffer.from(await resume.arrayBuffer()));
+
+		try {
+			const matcher = new ResumeMatcher();
+			const repos = await fetchGithubReposForUser(githubUsername);
+
+			if (repos.length === 0 || repos.some((repo) => !repo.includes("/"))) {
+				return status(400, {
+					success: false,
+					error: {
+						code: "REPO_EXTRACTION_FAILED",
+						message: `No repositories found for GitHub user ${githubUsername}`,
+					},
+				});
+			}
+
+			const report = await matcher.generateReport({
+				resumePath,
+				repos,
+				targetRole: job.jd_text,
+				githubUsername,
+			});
+
+			const required = extractSkills(job.jd_text);
+			const verified = [...report.verified_skills, ...report.partially_verified_skills];
+			const matched_skills = verified.map((skill) => skill.skill).filter((skill) => required.length === 0 || required.includes(skill));
+			const missing_skills = report.missing_for_role.length > 0 ? report.missing_for_role : required.filter((skill) => !matched_skills.includes(skill));
+
+			const confidenceScore = Math.round(
+				(verified.filter((skill) => skill.confidence === "high").length * 100 + verified.filter((skill) => skill.confidence === "medium").length * 70 + verified.filter((skill) => skill.confidence === "low").length * 40) /
+					Math.max(1, verified.length)
+			);
+
+			const trace = buildTraceFromReport(report as Record<string, any>, repos);
+			const result = {
+				match_score: report.overall_match_score,
+				matched_skills,
+				missing_skills,
+				reasoning: report.explanation,
+				candidate_summary: {
+					username: githubUsername,
+					total_repos: repos.length,
+					total_commits: 0,
+					primary_languages: report.verified_skills.slice(0, 5).map((skill) => skill.skill),
+				},
+				skill_breakdown: required.slice(0, 16).map((skill) => {
+					const found = verified.find((item) => item.skill.toLowerCase() === skill.toLowerCase());
+					return {
+						skill,
+						required: true,
+						candidate_level: found ? (found.confidence === "high" ? "expert" : found.confidence === "medium" ? "intermediate" : "beginner") : "none",
+						evidence: (found?.evidence_files || []).slice(0, 4).map((filePath) => ({
+							repo: filePath.split("/").slice(0, 2).join("/"),
+							loc: 0,
+							commits: 0,
+						})),
+					};
+				}),
+				confidence: confidenceScore,
+				trace,
+				agentic_report: report,
+				detected: {
+					github_username: githubUsername,
+					repositories: repos,
+					github_urls: repos.map((repo) => `https://github.com/${repo}`),
+				},
+			};
+
+			const inserted = await db
+				.insert(evaluations)
+				.values({
+					job_posting_id: jobId,
+					github_username: githubUsername,
+					match_score: report.overall_match_score,
+					confidence: confidenceScore,
+					matched_count: matched_skills.length,
+					missing_count: missing_skills.length,
+					evaluation_data: JSON.stringify(result),
+					trace_data: JSON.stringify(trace),
+					created_at: Date.now(),
+				})
+				.returning({ id: evaluations.id });
+
+			if (inserted[0]?.id) {
+				await db.insert(agentRuns).values({
+					evaluation_id: inserted[0].id,
+					run_type: "candidate_evaluation",
+					trace: JSON.stringify(trace),
+					created_at: Date.now(),
+				});
+			}
+
+			return {
+				success: true,
+				data: {
+					evaluation_id: inserted[0]?.id,
+					...result,
+				},
+			};
+		} finally {
+			await unlink(resumePath).catch(() => undefined);
+		}
+	})
 	.post(
 		"/evaluate-candidate",
 		async ({ body, status }) => {
