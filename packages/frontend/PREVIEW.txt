@@ -1,0 +1,142 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    TRUTHTALENT LANDING PAGE PREVIEW                          ║
+║                                                                              ║
+║  Theme: DARK MODE                                     [☀️ LIGHT] ← Toggle   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│                      ◉ Floating animated orb (cyan)                         │
+│                                                                              │
+│                           TRUTHTALENT                                        │
+│                          ━━━━━━━━━━                                         │
+│                          (Glowing Logo)                                      │
+│                                                                              │
+│    ┌────────────────────────────────────────────────────────────────┐      │
+│    │                   🔳 GLASS CARD CONTAINER 🔳                    │      │
+│    │                   (Frosted glass effect)                        │      │
+│    │                                                                  │      │
+│    │         ┌──────────┐         ┌──────────┐                      │      │
+│    │         │ EMPLOYEE │   ⟺    │ RECRUITER│                       │      │
+│    │         └──────────┘         └──────────┘                      │      │
+│    │         (Active/Red)         (Inactive)                         │      │
+│    │                                                                  │      │
+│    │   Create your profile, showcase skills, and connect             │      │
+│    │   with top companies                                            │      │
+│    │                                                                  │      │
+│    │  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┃          Land Your Dream Role                       ┃      │      │
+│    │  ┃          ━━━━━━━━━━━━━━━━━━                        ┃      │      │
+│    │  ┃    (Glowing red text in dark mode)                  ┃      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┃    Showcase your true skills and get matched        ┃      │      │
+│    │  ┃    with opportunities                                ┃      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛      │      │
+│    │                                                                  │      │
+│    │    ┌─────────────────┐  ┌─────────────────┐                   │      │
+│    │    │ Build verified  │  │ AI interview    │                   │      │
+│    │    │ profile         │  │ preparation     │                   │      │
+│    │    └─────────────────┘  └─────────────────┘                   │      │
+│    │                                                                  │      │
+│    │    ┌─────────────────┐  ┌─────────────────┐                   │      │
+│    │    │ Skill tracking  │  │ Direct employer │                   │      │
+│    │    │                 │  │ connections     │                   │      │
+│    │    └─────────────────┘  └─────────────────┘                   │      │
+│    │                                                                  │      │
+│    │    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓         │      │
+│    │    ┃                                                  ┃         │      │
+│    │    ┃           Apply Now →                           ┃         │      │
+│    │    ┃           (RED CTA BUTTON)                      ┃         │      │
+│    │    ┃                                                  ┃         │      │
+│    │    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛         │      │
+│    │                                                                  │      │
+│    │    Don't have an account? Sign up free                         │      │
+│    │                           ───────────                           │      │
+│    │                           (Underlined)                          │      │
+│    └──────────────────────────────────────────────────────────────┘      │
+│                                                                              │
+│                     ┌──────────────────────────────┐                       │
+│                     │ Powered by AI • Verified     │                       │
+│                     │ Skills • Transparent Hiring  │                       │
+│                     └──────────────────────────────┘                       │
+│                                                                              │
+│                                    ◉ Floating orb (purple)                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+═════════════════════════════════════════════════════════════════════════════
+
+                            WHEN YOU TOGGLE TO RECRUITER:
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│    ┌────────────────────────────────────────────────────────────────┐      │
+│    │         ┌──────────┐         ┌──────────┐                      │      │
+│    │         │ EMPLOYEE │   ⟺    │ RECRUITER│                       │      │
+│    │         └──────────┘         └──────────┘                      │      │
+│    │         (Inactive)          (Active/Cyan)                       │      │
+│    │                                                                  │      │
+│    │   Post jobs, discover talent, and build your dream team         │      │
+│    │   with AI-powered tools                                         │      │
+│    │                                                                  │      │
+│    │  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┃          Find Your Next Star                        ┃      │      │
+│    │  ┃          ━━━━━━━━━━━━━━━━━                        ┃      │      │
+│    │  ┃    (Glowing cyan text in dark mode)                 ┃      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┃    Access verified talent profiles with             ┃      │      │
+│    │  ┃    AI-powered matching                              ┃      │      │
+│    │  ┃                                                      ┃      │      │
+│    │  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛      │      │
+│    │                                                                  │      │
+│    │    ┌─────────────────┐  ┌─────────────────┐                   │      │
+│    │    │ Skills-based    │  │ AI-powered      │                   │      │
+│    │    │ discovery       │  │ insights        │                   │      │
+│    │    └─────────────────┘  └─────────────────┘                   │      │
+│    │                                                                  │      │
+│    │    ┌─────────────────┐  ┌─────────────────┐                   │      │
+│    │    │ Real-time collab│  │ Data-driven     │                   │      │
+│    │    │ tools           │  │ decisions       │                   │      │
+│    │    └─────────────────┘  └─────────────────┘                   │      │
+│    │                                                                  │      │
+│    │    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓         │      │
+│    │    ┃                                                  ┃         │      │
+│    │    ┃           Start Recruiting →                    ┃         │      │
+│    │    ┃           (CYAN CTA BUTTON)                     ┃         │      │
+│    │    ┃                                                  ┃         │      │
+│    │    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛         │      │
+│    └──────────────────────────────────────────────────────────────┘      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+═════════════════════════════════════════════════════════════════════════════
+
+                            LIGHT MODE APPEARANCE:
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Background: Paper texture (#FAFAFA) with subtle grid pattern               │
+│  Glass cards: High transparency (75%) with soft shadows                     │
+│  Text: Dark gray/black for high contrast                                    │
+│  Same accent colors: Red (employee) / Cyan (recruiter)                      │
+│  Same animations and interactions                                           │
+│  Cleaner, more minimal aesthetic                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+═════════════════════════════════════════════════════════════════════════════
+
+ANIMATIONS:
+  ▸ Logo scales in from 0.5 → 1.0 (600ms)
+  ▸ Theme toggle fades down from top (200ms delay)
+  ▸ Glass card slides up 30px (300ms delay)
+  ▸ Feature cards stagger in (100ms intervals)
+  ▸ Footer badge fades in (1s delay)
+  ▸ Orbs float continuously (20-25s infinite loop)
+  ▸ Hover states: buttons scale 1.05, CTA lifts with glow
+  ▸ Role toggle: smooth 400ms transition with fade + slide
+
+INTERACTIVITY:
+  ✓ Click role buttons to switch context
+  ✓ Click theme button to toggle dark/light
+  ✓ Hover any button for scale effect
+  ✓ All animations hardware-accelerated
+  ✓ Responsive on mobile and desktop
